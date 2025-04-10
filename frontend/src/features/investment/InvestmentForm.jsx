@@ -1,0 +1,151 @@
+import React, { useState, useEffect } from 'react';
+import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
+import AssetSearchInput from './AssetSearchInput';
+import { useAssetSearch } from './useAssetSearch';
+import InvestmentFormFields from './InvestmentFormFields';
+
+export default function InvestmentForm({ activeTab, onClose, showInline, setLastAddedAssetId }) {
+  const { categoryGroups, setCategoryGroups } = useCategoryGroups();
+
+  const [formData, setFormData] = useState({
+    name: '',
+    id: '',
+    quantity: '',
+    cost: '',
+    actualCost: '',
+    group: ''
+  });
+
+  const [cryptos, setCryptos] = useState([]);
+  const [assetType, setAssetType] = useState('Cryptos');
+
+  useEffect(() => {
+    fetch('/api/tickers')
+      .then(res => res.json())
+      .then(data => setCryptos(data.cryptos))
+      .catch(err => console.error('❌ Error loading tickers', err));
+  }, []);
+
+  const {
+    inputValue,
+    filteredOptions,
+    handleInputChange,
+    setInputValue
+  } = useAssetSearch(assetType, cryptos);
+
+  useEffect(() => {
+    setInputValue('');
+  }, [activeTab, assetType]);
+
+  const handleAdd = () => {
+    const { name, id, quantity, cost, actualCost, group } = formData;
+
+    if (!name || !quantity || !cost || !group) {
+      alert('All fields are required.');
+      return;
+    }
+
+    const qty = parseFloat(quantity);
+    const price = parseFloat(cost);
+    const actual = parseFloat(actualCost);
+
+    if (isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0) {
+      alert('Quantity and cost must be valid positive numbers.');
+      return;
+    }
+
+    if ((activeTab !== 'Investments') && (isNaN(actual) || actual <= 0)) {
+      alert('Actual value is required for non-investments.');
+      return;
+    }
+
+    const newAsset = {
+      name,
+      id: activeTab === 'Investments' ? id : name.toLowerCase().replace(/\s+/g, '-'),
+      initialQty: qty,
+      initialCost: price,
+      type: assetType === 'Cryptos' ? 'crypto' : 'stock'
+    };
+
+    if (activeTab !== 'Investments') {
+      newAsset.actualCost = actual;
+    }
+
+    setCategoryGroups(prev => {
+      const updated = { ...prev };
+      const groups = updated[activeTab] || {};
+      const assets = groups[group] || [];
+      groups[group] = [...assets, newAsset];
+      updated[activeTab] = groups;
+      return updated;
+    });
+
+    if (setLastAddedAssetId) {
+      setLastAddedAssetId(newAsset.id);
+    }
+
+    setFormData({ name: '', id: '', quantity: '', cost: '', actualCost: '', group: '' });
+    if (!showInline) onClose();
+  };
+
+  const handleSelectAsset = (option) => {
+    setFormData(prev => ({
+      ...prev,
+      name: option.label,
+      id: option.id?.toLowerCase().trim() || ''
+    }));
+  };
+
+  const renderAssetInput = () => {
+    if (activeTab === 'Investments') {
+      return (
+        <AssetSearchInput
+          assetType={assetType}
+          setAssetType={setAssetType}
+          inputValue={inputValue}
+          filteredOptions={filteredOptions}
+          handleInputChange={handleInputChange}
+          onSelect={handleSelectAsset}
+        />
+      );
+    }
+
+    return (
+      <input
+        className="border px-2 py-1 w-full rounded"
+        placeholder="Asset Name"
+        value={formData.name}
+        onChange={e => setFormData({ ...formData, name: e.target.value })}
+      />
+    );
+  };
+
+  return (
+    <div className="bg-white p-4 rounded shadow mb-4">
+      <h3 className="font-bold mb-2 text-gray-800">New Investment</h3>
+      <div className="mb-2">{renderAssetInput()}</div>
+      <InvestmentFormFields
+        activeTab={activeTab}
+        formData={formData}
+        setFormData={setFormData}
+        categoryGroups={categoryGroups}
+      />
+      <div className="flex gap-2 justify-end">
+        <button
+          onClick={handleAdd}
+          className="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded transition"
+        >
+          Add
+        </button>
+        {!showInline && (
+          <button
+            onClick={onClose}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded transition"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

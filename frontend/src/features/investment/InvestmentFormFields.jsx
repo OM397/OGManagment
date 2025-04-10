@@ -1,0 +1,52 @@
+import React from 'react';
+
+export default function InvestmentFormFields({ activeTab, formData, setFormData, categoryGroups }) {
+  return (
+    <>
+      <div className="flex flex-wrap gap-2 mb-2">
+        <input
+          className="border px-2 py-1 rounded w-36"
+          placeholder="Quantity"
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={formData.quantity}
+          onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+        />
+
+        <input
+          className="border px-2 py-1 rounded w-44"
+          placeholder="Purchase Price (€)"
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={formData.cost}
+          onChange={e => setFormData({ ...formData, cost: e.target.value })}
+        />
+
+        {activeTab !== 'Investments' && (
+          <input
+            className="border px-2 py-1 rounded w-44"
+            placeholder="Actual Value (€)"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={formData.actualCost}
+            onChange={e => setFormData({ ...formData, actualCost: e.target.value })}
+          />
+        )}
+      </div>
+
+      <select
+        className="border px-2 py-1 rounded mb-3 w-full"
+        value={formData.group}
+        onChange={e => setFormData({ ...formData, group: e.target.value })}
+      >
+        <option value="">Select Group</option>
+        {Object.keys(categoryGroups[activeTab] || {}).map(group => (
+          <option key={group} value={group}>{group}</option>
+        ))}
+      </select>
+    </>
+  );
+}

@@ -1,0 +1,32 @@
+# 📁 docker-compose.yml
+version: '3.8'
+
+services:
+  kubera-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile  # ya en la raíz del proyecto
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGODB_URI=${MONGODB_URI}
+      - RAPIDAPI_KEY=${RAPIDAPI_KEY}
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - EXCHANGE_API_KEY=${EXCHANGE_API_KEY}
+ 
+
+
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
