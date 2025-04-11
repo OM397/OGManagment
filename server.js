@@ -8,7 +8,7 @@ require('dotenv').config();
 
 const tickersRoutes = require('./backend/routes/tickersRoutes');
 const User = require('./backend/models/User');
-const isAdmin = require('./backend/middleware/isAdmin'); // ✅ middleware añadido
+const isAdmin = require('./backend/middleware/isAdmin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,14 +31,13 @@ mongoose.connect(MONGODB_URI, {
 app.use(cors());
 app.use(express.json());
 
-// ✅ Autenticación básica para todas las rutas
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded.username;
+    req.user = decoded; // username y role
     next();
   } catch (err) {
     res.status(403).json({ error: 'Token inválido.' });
@@ -47,7 +46,6 @@ function authMiddleware(req, res, next) {
 
 app.use('/api', tickersRoutes);
 
-// ✅ REGISTRO
 app.post('/api/register', async (req, res) => {
   const { username, password, role = 'user' } = req.body;
 
@@ -65,15 +63,14 @@ app.post('/api/register', async (req, res) => {
     const newUser = new User({ username, password: hash, role });
     await newUser.save();
 
-    const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' }); // ✅ incluye role
-    res.status(201).json({ success: true, token, username });
+    const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' });
+    res.status(201).json({ success: true, token, username, role });
   } catch (err) {
     console.error("Error registrando usuario", username, err);
     res.status(500).json({ error: 'Error al registrar el usuario.' });
   }
 });
 
-// ✅ LOGIN
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -84,18 +81,17 @@ app.post('/api/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
 
-    const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' }); // ✅ incluye role
-    res.status(200).json({ success: true, token, username });
+    const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    res.status(200).json({ success: true, token, username, role: user.role });
   } catch (err) {
     console.error("Error validando login:", err);
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
 
-// ✅ Ruta protegida por autenticación básica
 app.get('/api/user-data', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.user });
+    const user = await User.findOne({ username: req.user.username });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     const { password, ...safeData } = user.toObject();
@@ -105,10 +101,9 @@ app.get('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Guardado de datos
 app.post('/api/user-data', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.user });
+    const user = await User.findOne({ username: req.user.username });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     user.data = req.body;
@@ -119,12 +114,10 @@ app.post('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Ruta solo para admin
-app.get('/api/admin-only', isAdmin, (req, res) => {
-  res.json({ message: `👑 Bienvenido admin ${req.user}` });
+app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
+  res.json({ message: `👑 Bienvenido admin ${req.user.username}` });
 });
 
-// 👉 Sirve archivos estáticos del frontend
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {

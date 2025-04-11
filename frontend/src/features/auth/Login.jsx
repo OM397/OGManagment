@@ -30,7 +30,10 @@ export default function Login({ onLogin }) {
       if (response.data.success) {
         localStorage.setItem('username', trimmedUsername);
         localStorage.setItem('token', response.data.token);
-        onLogin(trimmedUsername, response.data.token); // 🔥 PASAMOS EL TOKEN Y USER AL PADRE
+        if (response.data.role) {
+          localStorage.setItem('role', response.data.role); // ✅ guardar role si está presente
+        }
+        onLogin(trimmedUsername, response.data.token);
       }
     } catch (err) {
       const msg = err.response?.data?.error || 'Error en la autenticación';

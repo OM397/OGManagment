@@ -8,10 +8,12 @@ module.exports = function isAdmin(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+
     if (decoded.role !== 'admin') {
       return res.status(403).json({ error: 'Acceso restringido a administradores.' });
     }
-    req.user = decoded.username;
+
+    req.user = decoded; // ✅ mantenemos username y role disponibles
     next();
   } catch (err) {
     return res.status(403).json({ error: 'Token inválido.' });
