@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const tickersRoutes = require('./backend/routes/tickersRoutes');
 const User = require('./backend/models/User');
+const isAdmin = require('./backend/middleware/isAdmin'); // ✅ middleware añadido
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,7 @@ mongoose.connect(MONGODB_URI, {
 app.use(cors());
 app.use(express.json());
 
+// ✅ Autenticación básica para todas las rutas
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
@@ -45,8 +47,9 @@ function authMiddleware(req, res, next) {
 
 app.use('/api', tickersRoutes);
 
+// ✅ REGISTRO
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, role = 'user' } = req.body;
 
   if (!username || !password || username.length < 3 || password.length < 5) {
     return res.status(400).json({ error: 'Credenciales inválidas.' });
@@ -59,10 +62,10 @@ app.post('/api/register', async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hash });
+    const newUser = new User({ username, password: hash, role });
     await newUser.save();
 
-    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' }); // ✅ incluye role
     res.status(201).json({ success: true, token, username });
   } catch (err) {
     console.error("Error registrando usuario", username, err);
@@ -70,6 +73,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+// ✅ LOGIN
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -77,20 +81,10 @@ app.post('/api/login', async (req, res) => {
     const user = await User.findOne({ username });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
-//    const isMatch = await bcrypt.compare(password, user.password);
-  //  if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
-
     const isMatch = await bcrypt.compare(password, user.password);
-console.log(`🧪 Login intento: username=${username}, pass=${password}`);
-console.log(`🔑 DB hash=${user.password}`);
-console.log(`🔐 Comparación bcrypt: ${isMatch}`);
+    if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
 
-if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
-
-
-
-
-    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' }); // ✅ incluye role
     res.status(200).json({ success: true, token, username });
   } catch (err) {
     console.error("Error validando login:", err);
@@ -98,6 +92,7 @@ if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
   }
 });
 
+// ✅ Ruta protegida por autenticación básica
 app.get('/api/user-data', authMiddleware, async (req, res) => {
   try {
     const user = await User.findOne({ username: req.user });
@@ -110,6 +105,7 @@ app.get('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ Guardado de datos
 app.post('/api/user-data', authMiddleware, async (req, res) => {
   try {
     const user = await User.findOne({ username: req.user });
@@ -123,17 +119,17 @@ app.post('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ Ruta solo para admin
+app.get('/api/admin-only', isAdmin, (req, res) => {
+  res.json({ message: `👑 Bienvenido admin ${req.user}` });
+});
+
+// 👉 Sirve archivos estáticos del frontend
 const path = require('path');
-
-// 👉 Sirve archivos estáticos desde el frontend
 app.use(express.static(path.join(__dirname, 'public')));
-
-// 👉 Para rutas que no son API, retorna el index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-
 
 app.listen(PORT, () => {
   console.log(`✅ Backend server running at http://localhost:${PORT}`);
