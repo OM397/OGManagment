@@ -1,7 +1,12 @@
-// 📁 testMongo.js
-const mongoose = require("mongoose");
+// testMongo.js
+const mongoose = require('mongoose');
+const User = require('./backend/models/User');
+require('dotenv').config();
 
-mongoose
-  .connect("mongodb+srv://omarque:ejaubG9hEYbGU8qZ@cluster0.mokbgf6.mongodb.net/kubera?retryWrites=true&w=majority&appName=Cluster0")
-  .then(() => console.log("✅ Conexión a MongoDB Atlas exitosa"))
-  .catch((err) => console.error("❌ Error de conexión:", err));
+mongoose.connect(process.env.MONGODB_URI)
+  .then(async () => {
+    await User.deleteOne({ username: 'admin' });
+    console.log('✅ Usuario admin eliminado');
+    mongoose.disconnect();
+  })
+  .catch(console.error);

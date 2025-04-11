@@ -1,5 +1,6 @@
 // 📁 frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import "./shared/styles/index.css";
 import Sidebar from "./shared/Sidebar";
 import Topbar from "./shared/Topbar";
@@ -7,7 +8,13 @@ import Portfolio from "./features/portfolio/Portfolio";
 import useMarketData from "./features/assets/useMarketData";
 import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/CategoryGroupsContext';
 import Login from './features/auth/Login';
+import AdminPanel from './features/admin/AdminPanel';
 import { API_BASE } from './shared/config';
+import { jwtDecode } from 'jwt-decode';
+
+
+
+
 
 function InnerApp({ user }) {
   const { categoryGroups } = useCategoryGroups();
@@ -56,18 +63,14 @@ function App() {
   useEffect(() => {
     if (!user || !token) return;
 
-    console.log("🔁 Ejecutando useEffect para traer data");
-
     fetch(`${API_BASE}/user-data`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => {
-        console.log(`📥 Data cargada para ${user}:`, data);
         setInitialData(data);
       })
-      .catch(err => {
-        console.error('❌ Error al cargar los datos del usuario:', err);
+      .catch(() => {
         setInitialData({ Investments: {}, 'Real Estate': {}, Others: {} });
       });
   }, [user, token]);
@@ -79,18 +82,24 @@ function App() {
     setToken(token);
   };
 
-  if (!user || !token) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  if (!initialData) {
-    return <div className="p-6 text-center">Cargando datos del usuario...</div>;
-  }
+  if (!user || !token) return <Login onLogin={handleLogin} />;
+  if (!initialData) return <div className="p-6 text-center">Cargando datos del usuario...</div>;
 
   return (
-    <CategoryGroupsProvider initialData={initialData}>
-      <InnerApp user={user} />
-    </CategoryGroupsProvider>
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <CategoryGroupsProvider initialData={initialData}>
+              <InnerApp user={user} />
+            </CategoryGroupsProvider>
+          }
+        />
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
   );
 }
 
