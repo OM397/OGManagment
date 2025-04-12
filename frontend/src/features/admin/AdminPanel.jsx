@@ -1,7 +1,9 @@
-// 📁 frontend/src/features/admin/AdminPanel.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode'; // ✅ correcto
+
+
+
 
 
 
@@ -21,7 +23,7 @@ export default function AdminPanel() {
     }
 
     try {
-      const { role } = jwtDecode(token);
+      const { role, username } = jwt_decode(token);
       if (role !== 'admin') {
         setError('Acceso denegado. No eres administrador.');
         return;
@@ -31,7 +33,7 @@ export default function AdminPanel() {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => {
-          setMessage(res.data.message);
+          setMessage(res.data.message || `Bienvenido admin ${username}`);
         })
         .catch(err => {
           setError(err.response?.data?.error || 'Error al validar admin');

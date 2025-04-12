@@ -10,7 +10,11 @@ import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/Cate
 import Login from './features/auth/Login';
 import AdminPanel from './features/admin/AdminPanel';
 import { API_BASE } from './shared/config';
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode'; // ✅ correcto
+
+
+
+
 
 
 
