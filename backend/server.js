@@ -83,16 +83,24 @@ app.post('/api/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
 
-    // 🕒 Registrar último login
     user.lastLogin = new Date();
     await user.save();
 
     const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-    res.status(200).json({ success: true, token, username, role: user.role });
+
+    // ⬅️ Incluir lastLogin en la respuesta
+    res.status(200).json({
+      success: true,
+      token,
+      username,
+      role: user.role,
+      lastLogin: user.lastLogin,
+    });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
+
 
 // 👤 Eliminar usuario (protegido admin)
 app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, res) => {
@@ -167,12 +175,13 @@ app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
 // 📋 Ruta admin - obtener todos los usuarios
 app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
   try {
-    const users = await User.find({}, 'username role createdAt').sort({ createdAt: -1 });
+    const users = await User.find({}, 'username role createdAt lastLogin').sort({ createdAt: -1 });
     res.status(200).json({ users });
   } catch (err) {
     res.status(500).json({ error: 'No se pudieron cargar los usuarios.' });
   }
 });
+
 
 // 📁 Serve frontend static (si aplica)
 app.use(express.static(path.join(__dirname, 'public')));
