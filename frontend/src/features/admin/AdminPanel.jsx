@@ -15,11 +15,18 @@ export default function AdminPanel() {
 
   const fetchUsers = async (token) => {
     try {
-      const res = await axios.get('http://localhost:3001/api/admin/users', {
-        headers: { Authorization: `Bearer ${token}` }
+      const { data } = await axios.get('http://localhost:3001/api/admin/users', {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setUsers(res.data.users || []);
-    } catch {
+
+      if (Array.isArray(data.users)) {
+        setUsers(data.users);
+      } else {
+        console.warn('⚠️ No se recibieron usuarios');
+        setUsers([]);
+      }
+    } catch (err) {
+      console.error('❌ Error en fetchUsers:', err);
       setError('Error cargando usuarios');
     }
   };
@@ -86,7 +93,7 @@ export default function AdminPanel() {
       })
         .then(res => {
           setMessage(res.data.message || `Bienvenido admin ${username}`);
-          return fetchUsers(token);
+          fetchUsers(token);
         })
         .catch(err => {
           setError(err.response?.data?.error || 'Error al validar admin');
@@ -110,6 +117,7 @@ export default function AdminPanel() {
 
   if (loading) return <p className="text-center mt-10">Cargando...</p>;
   if (!auth.token) return <Login onLogin={handleLogin} />;
+  if (error) return <p className="text-center text-red-600">{error}</p>;
 
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -139,12 +147,14 @@ export default function AdminPanel() {
           </tr>
         </thead>
         <tbody>
-          {users.map((u) => (
+          {users.length === 0 ? (
+            <tr><td colSpan="5" className="p-4 text-center">No hay usuarios disponibles.</td></tr>
+          ) : users.map((u) => (
             <tr key={u._id}>
               <td className="p-2 border">{u.username}</td>
               <td className="p-2 border">{u.role}</td>
               <td className="p-2 border">{new Date(u.createdAt).toLocaleString()}</td>
-              <td className="p-2 border">{u.lastLogin && !isNaN(Date.parse(u.lastLogin)) ? new Date(u.lastLogin).toLocaleString(): '—'}</td>
+              <td className="p-2 border">{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '—'}</td>
               <td className="p-2 border space-x-2">
                 {u.username !== 'admin' && (
                   <>

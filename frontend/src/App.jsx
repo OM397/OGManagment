@@ -1,14 +1,16 @@
+// 📁 frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import "./shared/styles/index.css";
-import Sidebar from "./shared/Sidebar";
-import Topbar from "./shared/Topbar";
-import Portfolio from "./features/portfolio/Portfolio";
-import useMarketData from "./features/assets/useMarketData";
+import './shared/styles/index.css';
+import Sidebar from './shared/Sidebar';
+import Topbar from './shared/Topbar';
+import Portfolio from './features/portfolio/Portfolio';
+import useMarketData from './features/assets/useMarketData';
 import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/CategoryGroupsContext';
 import Login from './features/auth/Login';
 import AdminPanel from './features/admin/AdminPanel';
 import { API_BASE } from './shared/config';
+import { jwtDecode } from 'jwt-decode';
 
 function InnerApp({ user }) {
   const { categoryGroups } = useCategoryGroups();
@@ -50,34 +52,47 @@ function InnerApp({ user }) {
 }
 
 function App() {
-  const [user, setUser] = useState(localStorage.getItem('username') || '');
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const pathname = window.location.pathname;
+  const isAdminPath = pathname.startsWith('/admin');
+
+  const [user, setUser] = useState(localStorage.getItem(isAdminPath ? 'admin_username' : 'username') || '');
+  const [token, setToken] = useState(localStorage.getItem(isAdminPath ? 'admin_token' : 'token') || '');
   const [initialData, setInitialData] = useState(null);
 
   useEffect(() => {
     if (!user || !token) return;
 
-    fetch(`${API_BASE}/user-data`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        setInitialData(data);
+    if (!isAdminPath) {
+      fetch(`${API_BASE}/user-data`, {
+        headers: { Authorization: `Bearer ${token}` }
       })
-      .catch(() => {
-        setInitialData({ Investments: {}, 'Real Estate': {}, Others: {} });
-      });
-  }, [user, token]);
+        .then(res => res.json())
+        .then(data => {
+          setInitialData(data);
+        })
+        .catch(() => {
+          setInitialData({ Investments: {}, 'Real Estate': {}, Others: {} });
+        });
+    }
+  }, [user, token, isAdminPath]);
 
   const handleLogin = (username, token) => {
-    localStorage.setItem('username', username);
-    localStorage.setItem('token', token);
+    const decoded = jwtDecode(token);
+
+    if (decoded.role === 'admin') {
+      localStorage.setItem('admin_username', username);
+      localStorage.setItem('admin_token', token);
+    } else {
+      localStorage.setItem('username', username);
+      localStorage.setItem('token', token);
+    }
+
     setUser(username);
     setToken(token);
   };
 
   if (!user || !token) return <Login onLogin={handleLogin} />;
-  if (!initialData) return <div className="p-6 text-center">Cargando datos del usuario...</div>;
+  if (!initialData && !isAdminPath) return <div className="p-6 text-center">Cargando datos del usuario...</div>;
 
   return (
     <Router>
@@ -91,7 +106,7 @@ function App() {
           }
         />
         <Route path="/admin" element={<AdminPanel />} />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to={isAdminPath ? "/admin" : "/"} />} />
       </Routes>
     </Router>
   );
