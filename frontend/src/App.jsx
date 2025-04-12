@@ -7,7 +7,7 @@ import Topbar from './shared/Topbar';
 import Portfolio from './features/portfolio/Portfolio';
 import useMarketData from './features/assets/useMarketData';
 import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/CategoryGroupsContext';
-import Login from './features/auth/Login';
+import LoginWithRedirect from './features/auth/LoginWithRedirect';
 import AdminPanel from './features/admin/AdminPanel';
 import { API_BASE } from './shared/config';
 
@@ -63,25 +63,39 @@ function App() {
     setRole('');
     setInitialData(null);
     localStorage.clear();
-    window.location.href = '/';
+    navigate('/');
   };
 
   const fetchUserData = async () => {
     try {
-      const adminRes = await fetch(`${API_BASE}/admin-only`, { credentials: 'include' });
-      if (adminRes.ok) {
-        const data = await adminRes.json();
-        setUser(data.username);
-        setRole('admin');
-      } else {
-        const userRes = await fetch(`${API_BASE}/user-data`, { credentials: 'include' });
-        if (!userRes.ok) throw new Error();
-        const data = await userRes.json();
-        setUser(data.username);
-        setRole('user');
-        setInitialData(data.data);
+      console.log('⏳ Verificando sesión...');
+
+      const userInfo = await fetch(`${API_BASE}/user`, { credentials: 'include' });
+      const rawCookie = document.cookie;
+      console.log('🍪 Cookie actual:', rawCookie);
+
+      if (!userInfo.ok) {
+        console.log('❌ /user falló con status', userInfo.status);
+        throw new Error('Fallo al obtener usuario');
       }
-    } catch (_) {
+
+      const { username, role } = await userInfo.json();
+      console.log('✅ Usuario autenticado:', { username, role });
+      setUser(username);
+      setRole(role);
+
+      const userData = await fetch(`${API_BASE}/user-data`, { credentials: 'include' });
+      if (!userData.ok) {
+        console.log('❌ /user-data falló con status', userData.status);
+        throw new Error('Fallo al obtener datos');
+      }
+
+      const result = await userData.json();
+      const data = result?.data || {};
+      console.log('📦 Datos del usuario:', data);
+      setInitialData(data);
+    } catch (err) {
+      console.log('⚠️ Sesión inválida o error:', err);
       setUser('');
       setRole('');
       setInitialData(null);
@@ -108,7 +122,7 @@ function App() {
         path="/"
         element={
           !user ? (
-            <Login onLogin={handleLogin} />
+            <LoginWithRedirect />
           ) : initialData ? (
             <CategoryGroupsProvider initialData={initialData}>
               <InnerApp user={user} onLogout={logout} />
@@ -124,7 +138,7 @@ function App() {
           user && role === 'admin' ? (
             <AdminPanel onLogout={logout} />
           ) : (
-            <Login onLogin={handleLogin} />
+            <LoginWithRedirect />
           )
         }
       />

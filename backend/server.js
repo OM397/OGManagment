@@ -149,7 +149,7 @@ app.get('/api/user-data', authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     const { password, ...safeData } = user.toObject();
-    res.json(safeData.data);
+    res.status(200).json({ data: safeData.data });
   } catch (err) {
     res.status(500).json({ error: 'Error al leer datos.' });
   }
@@ -179,6 +179,15 @@ app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'No se pudieron cargar los usuarios.' });
   }
+});
+
+// ✅ Ruta nueva: datos básicos del usuario desde el token JWT
+app.get('/api/user', authMiddleware, (req, res) => {
+  const { username, role } = req.user || {};
+  if (!username || !role) {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+  res.status(200).json({ username, role });
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
