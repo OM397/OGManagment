@@ -1,14 +1,15 @@
-// 📁 /server.js
+// 📁 /backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 require('dotenv').config();
 
-const tickersRoutes = require('./backend/routes/tickersRoutes');
-const User = require('./backend/models/User');
-const isAdmin = require('./backend/middleware/isAdmin');
+const tickersRoutes = require('./routes/tickersRoutes');
+const User = require('./models/User');
+const isAdmin = require('./middleware/isAdmin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,7 +38,7 @@ function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // username y role
+    req.user = decoded;
     next();
   } catch (err) {
     res.status(403).json({ error: 'Token inválido.' });
@@ -46,6 +47,7 @@ function authMiddleware(req, res, next) {
 
 app.use('/api', tickersRoutes);
 
+// 🔐 Registro de usuarios
 app.post('/api/register', async (req, res) => {
   const { username, password, role = 'user' } = req.body;
 
@@ -66,11 +68,11 @@ app.post('/api/register', async (req, res) => {
     const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' });
     res.status(201).json({ success: true, token, username, role });
   } catch (err) {
-    console.error("Error registrando usuario", username, err);
     res.status(500).json({ error: 'Error al registrar el usuario.' });
   }
 });
 
+// 🔑 Login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -84,11 +86,11 @@ app.post('/api/login', async (req, res) => {
     const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
     res.status(200).json({ success: true, token, username, role: user.role });
   } catch (err) {
-    console.error("Error validando login:", err);
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
 
+// 📦 Obtener datos del usuario
 app.get('/api/user-data', authMiddleware, async (req, res) => {
   try {
     const user = await User.findOne({ username: req.user.username });
@@ -101,6 +103,7 @@ app.get('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
+// 💾 Guardar datos del usuario
 app.post('/api/user-data', authMiddleware, async (req, res) => {
   try {
     const user = await User.findOne({ username: req.user.username });
@@ -114,11 +117,12 @@ app.post('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
+// 🔐 Ruta admin
 app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
   res.json({ message: `👑 Bienvenido admin ${req.user.username}` });
 });
 
-const path = require('path');
+// 📁 Serve frontend static (si aplica)
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
