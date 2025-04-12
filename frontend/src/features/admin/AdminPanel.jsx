@@ -144,7 +144,7 @@ export default function AdminPanel() {
               <td className="p-2 border">{u.username}</td>
               <td className="p-2 border">{u.role}</td>
               <td className="p-2 border">{new Date(u.createdAt).toLocaleString()}</td>
-              <td className="p-2 border">{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '—'}</td>
+              <td className="p-2 border">{u.lastLogin && !isNaN(Date.parse(u.lastLogin)) ? new Date(u.lastLogin).toLocaleString(): '—'}</td>
               <td className="p-2 border space-x-2">
                 {u.username !== 'admin' && (
                   <>

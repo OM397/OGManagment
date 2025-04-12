@@ -88,19 +88,16 @@ app.post('/api/login', async (req, res) => {
 
     const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
-    // ⬅️ Incluir lastLogin en la respuesta
     res.status(200).json({
       success: true,
       token,
       username,
-      role: user.role,
-      lastLogin: user.lastLogin,
+      role: user.role
     });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
-
 
 // 👤 Eliminar usuario (protegido admin)
 app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, res) => {
@@ -133,12 +130,9 @@ app.patch('/api/admin/users/:username/role', authMiddleware, isAdmin, async (req
 
     res.status(200).json({ success: true, role: newRole });
   } catch (err) {
-    console.error('❌ Error en cambiar rol:', err);
     res.status(500).json({ error: 'Error actualizando rol.' });
   }
 });
-
-
 
 // 📦 Obtener datos del usuario
 app.get('/api/user-data', authMiddleware, async (req, res) => {
@@ -175,13 +169,13 @@ app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
 // 📋 Ruta admin - obtener todos los usuarios
 app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
   try {
-    const users = await User.find({}, 'username role createdAt lastLogin').sort({ createdAt: -1 });
+    const users = await User.find({}, { username: 1, role: 1, createdAt: 1, lastLogin: 1 }).lean().sort({ createdAt: -1 });
+
     res.status(200).json({ users });
   } catch (err) {
     res.status(500).json({ error: 'No se pudieron cargar los usuarios.' });
   }
 });
-
 
 // 📁 Serve frontend static (si aplica)
 app.use(express.static(path.join(__dirname, 'public')));
