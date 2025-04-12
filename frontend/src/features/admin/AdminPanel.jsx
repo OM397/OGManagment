@@ -1,3 +1,4 @@
+// 📁 frontend/src/features/admin/AdminPanel.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';

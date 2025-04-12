@@ -110,20 +110,26 @@ app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, re
 // 🔁 Cambiar rol (protegido admin)
 app.patch('/api/admin/users/:username/role', authMiddleware, isAdmin, async (req, res) => {
   const { username } = req.params;
-  if (username === 'admin') return res.status(403).json({ error: 'No se puede cambiar el rol del usuario admin.' });
+  if (username === 'admin') {
+    return res.status(403).json({ error: 'No se puede cambiar el rol del usuario admin.' });
+  }
 
   try {
     const user = await User.findOne({ username });
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
 
-    user.role = user.role === 'admin' ? 'user' : 'admin';
-    await user.save();
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    await User.updateOne({ username }, { role: newRole });
 
-    res.status(200).json({ success: true, role: user.role });
+    res.status(200).json({ success: true, role: newRole });
   } catch (err) {
+    console.error('❌ Error en cambiar rol:', err);
     res.status(500).json({ error: 'Error actualizando rol.' });
   }
 });
+
 
 
 // 📦 Obtener datos del usuario
