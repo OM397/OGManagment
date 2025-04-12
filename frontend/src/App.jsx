@@ -1,6 +1,6 @@
 // 📁 frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './shared/styles/index.css';
 import Sidebar from './shared/Sidebar';
 import Topbar from './shared/Topbar';
@@ -10,7 +10,6 @@ import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/Cate
 import Login from './features/auth/Login';
 import AdminPanel from './features/admin/AdminPanel';
 import { API_BASE } from './shared/config';
-import { jwtDecode } from 'jwt-decode';
 
 function InnerApp({ user }) {
   const { categoryGroups } = useCategoryGroups();
@@ -52,64 +51,60 @@ function InnerApp({ user }) {
 }
 
 function App() {
-  const pathname = window.location.pathname;
-  const isAdminPath = pathname.startsWith('/admin');
-
-  const [user, setUser] = useState(localStorage.getItem(isAdminPath ? 'admin_username' : 'username') || '');
-  const [token, setToken] = useState(localStorage.getItem(isAdminPath ? 'admin_token' : 'token') || '');
+  const [user, setUser] = useState(sessionStorage.getItem('username') || '');
+  const [token, setToken] = useState(sessionStorage.getItem('token') || '');
   const [initialData, setInitialData] = useState(null);
+  const location = useLocation();
 
   useEffect(() => {
     if (!user || !token) return;
 
-    if (!isAdminPath) {
-      fetch(`${API_BASE}/user-data`, {
-        headers: { Authorization: `Bearer ${token}` }
+    fetch(`${API_BASE}/user-data`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        setInitialData(data);
       })
-        .then(res => res.json())
-        .then(data => {
-          setInitialData(data);
-        })
-        .catch(() => {
-          setInitialData({ Investments: {}, 'Real Estate': {}, Others: {} });
-        });
-    }
-  }, [user, token, isAdminPath]);
+      .catch(() => {
+        setInitialData({ Investments: {}, 'Real Estate': {}, Others: {} });
+      });
+  }, [user, token]);
 
   const handleLogin = (username, token) => {
-    const decoded = jwtDecode(token);
-
-    if (decoded.role === 'admin') {
-      localStorage.setItem('admin_username', username);
-      localStorage.setItem('admin_token', token);
-    } else {
-      localStorage.setItem('username', username);
-      localStorage.setItem('token', token);
-    }
-
+    sessionStorage.setItem('username', username);
+    sessionStorage.setItem('token', token);
     setUser(username);
     setToken(token);
   };
 
   if (!user || !token) return <Login onLogin={handleLogin} />;
-  if (!initialData && !isAdminPath) return <div className="p-6 text-center">Cargando datos del usuario...</div>;
+  if (!initialData) return <div className="p-6 text-center">Cargando datos del usuario...</div>;
+
+  const isAdminPath = location.pathname === '/admin';
 
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
+    <Routes>
+      <Route
+        path="/"
+        element={
+          !isAdminPath && (
             <CategoryGroupsProvider initialData={initialData}>
               <InnerApp user={user} />
             </CategoryGroupsProvider>
-          }
-        />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="*" element={<Navigate to={isAdminPath ? "/admin" : "/"} />} />
-      </Routes>
-    </Router>
+          )
+        }
+      />
+      <Route path="/admin" element={<AdminPanel />} />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
 
-export default App;
+export default function WrappedApp() {
+  return (
+    <Router>
+      <App />
+    </Router>
+  );
+}
