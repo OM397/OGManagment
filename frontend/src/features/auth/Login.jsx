@@ -1,12 +1,15 @@
+// 📁 frontend/src/features/auth/Login.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../../shared/config';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,6 +17,7 @@ export default function Login({ onLogin }) {
 
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
+
     if (!trimmedUsername || !trimmedPassword) {
       setError('Por favor, complete ambos campos.');
       return;
@@ -22,21 +26,26 @@ export default function Login({ onLogin }) {
     const endpoint = isRegistering ? '/register' : '/login';
 
     try {
-      const response = await axios.post(`${API_BASE}${endpoint}`, {
-        username: trimmedUsername,
-        password: trimmedPassword
-      });
-
-      if (response.data.success) {
-        localStorage.setItem('username', trimmedUsername);
-        localStorage.setItem('token', response.data.token);
-        if (response.data.role) {
-          localStorage.setItem('role', response.data.role); // ✅ guardar role si está presente
+      const response = await axios.post(
+        `${API_BASE}${endpoint}`,
+        {
+          username: trimmedUsername,
+          password: trimmedPassword
+        },
+        {
+          withCredentials: true
         }
-        onLogin(trimmedUsername, response.data.token);
+      );
+
+      if (!response?.data?.success || !response.data.role) {
+        throw new Error('Login fallido.');
       }
+
+      localStorage.clear();
+      onLogin(trimmedUsername, response.data.role);
+      window.location.href = response.data.role === 'admin' ? '/admin' : '/';
     } catch (err) {
-      const msg = err.response?.data?.error || 'Error en la autenticación';
+      const msg = err.response?.data?.error || err.message || 'Error en la autenticación';
       setError(msg);
     }
   };

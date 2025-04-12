@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config();
 
@@ -29,11 +30,16 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+
+app.use(cookieParser());
 app.use(express.json());
 
 function authMiddleware(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
 
   try {
@@ -47,7 +53,14 @@ function authMiddleware(req, res, next) {
 
 app.use('/api', tickersRoutes);
 
-// 🔐 Registro de usuarios
+const isDev = process.env.NODE_ENV !== 'production';
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: !isDev,
+  sameSite: isDev ? 'Lax' : 'Strict',
+  maxAge: 60 * 60 * 1000
+};
+
 app.post('/api/register', async (req, res) => {
   const { username, password, role = 'user' } = req.body;
 
@@ -57,22 +70,22 @@ app.post('/api/register', async (req, res) => {
 
   try {
     const existing = await User.findOne({ username });
-    if (existing) {
-      return res.status(409).json({ error: 'Usuario ya existe.' });
-    }
+    if (existing) return res.status(409).json({ error: 'Usuario ya existe.' });
 
     const hash = await bcrypt.hash(password, 10);
     const newUser = new User({ username, password: hash, role });
     await newUser.save();
 
     const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' });
-    res.status(201).json({ success: true, token, username, role });
+
+    res.cookie('token', token, COOKIE_OPTIONS)
+       .status(201)
+       .json({ success: true, username, role });
   } catch (err) {
     res.status(500).json({ error: 'Error al registrar el usuario.' });
   }
 });
 
-// 🔑 Login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -88,18 +101,19 @@ app.post('/api/login', async (req, res) => {
 
     const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
-    res.status(200).json({
-      success: true,
-      token,
-      username,
-      role: user.role
-    });
+    res.cookie('token', token, COOKIE_OPTIONS)
+       .status(200)
+       .json({ success: true, username, role: user.role });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
 
-// 👤 Eliminar usuario (protegido admin)
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('token', COOKIE_OPTIONS);
+  res.status(200).json({ success: true });
+});
+
 app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, res) => {
   const { username } = req.params;
   if (username === 'admin') return res.status(403).json({ error: 'No se puede eliminar el usuario admin.' });
@@ -112,18 +126,13 @@ app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, re
   }
 });
 
-// 🔁 Cambiar rol (protegido admin)
 app.patch('/api/admin/users/:username/role', authMiddleware, isAdmin, async (req, res) => {
   const { username } = req.params;
-  if (username === 'admin') {
-    return res.status(403).json({ error: 'No se puede cambiar el rol del usuario admin.' });
-  }
+  if (username === 'admin') return res.status(403).json({ error: 'No se puede cambiar el rol del usuario admin.' });
 
   try {
     const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado.' });
-    }
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     const newRole = user.role === 'admin' ? 'user' : 'admin';
     await User.updateOne({ username }, { role: newRole });
@@ -134,7 +143,6 @@ app.patch('/api/admin/users/:username/role', authMiddleware, isAdmin, async (req
   }
 });
 
-// 📦 Obtener datos del usuario
 app.get('/api/user-data', authMiddleware, async (req, res) => {
   try {
     const user = await User.findOne({ username: req.user.username });
@@ -147,7 +155,6 @@ app.get('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
-// 💾 Guardar datos del usuario
 app.post('/api/user-data', authMiddleware, async (req, res) => {
   try {
     const user = await User.findOne({ username: req.user.username });
@@ -161,23 +168,19 @@ app.post('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
-// 🔐 Ruta admin - solo acceso
 app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
-  res.json({ message: `👑 Bienvenido admin ${req.user.username}` });
+  res.json({ message: `👑 Bienvenido admin ${req.user.username}`, username: req.user.username });
 });
 
-// 📋 Ruta admin - obtener todos los usuarios
 app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
   try {
     const users = await User.find({}, { username: 1, role: 1, createdAt: 1, lastLogin: 1 }).lean().sort({ createdAt: -1 });
-
     res.status(200).json({ users });
   } catch (err) {
     res.status(500).json({ error: 'No se pudieron cargar los usuarios.' });
   }
 });
 
-// 📁 Serve frontend static (si aplica)
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

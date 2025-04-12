@@ -1,17 +1,17 @@
 // 📁 frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import "./shared/styles/index.css";
-import Sidebar from "./shared/Sidebar";
-import Topbar from "./shared/Topbar";
-import Portfolio from "./features/portfolio/Portfolio";
-import useMarketData from "./features/assets/useMarketData";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import './shared/styles/index.css';
+import Sidebar from './shared/Sidebar';
+import Topbar from './shared/Topbar';
+import Portfolio from './features/portfolio/Portfolio';
+import useMarketData from './features/assets/useMarketData';
 import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/CategoryGroupsContext';
 import Login from './features/auth/Login';
 import AdminPanel from './features/admin/AdminPanel';
 import { API_BASE } from './shared/config';
 
-function InnerApp({ user }) {
+function InnerApp({ user, onLogout }) {
   const { categoryGroups } = useCategoryGroups();
   const [exchangeRates] = useState({ EUR: 1, USD: 1.1, GBP: 0.85 });
   const [selected, setSelected] = useState('Assets');
@@ -40,7 +40,7 @@ function InnerApp({ user }) {
       <Sidebar selected={selected} setSelected={setSelected} totalValue={totalValue} />
       <main className="flex-1 p-6 bg-white">
         <div className="max-w-5xl mx-auto">
-          <Topbar user={user} />
+          <Topbar user={user} onLogout={onLogout} />
           {selected === 'Assets' && (
             <Portfolio initialData={categoryGroups} exchangeRates={exchangeRates} />
           )}
@@ -51,71 +51,92 @@ function InnerApp({ user }) {
 }
 
 function App() {
-  const [user, setUser] = useState(sessionStorage.getItem('username') || '');
-  const [token, setToken] = useState(sessionStorage.getItem('token') || '');
+  const [user, setUser] = useState('');
   const [initialData, setInitialData] = useState(null);
+  const [role, setRole] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    let timeout;
-    const logout = () => {
-      sessionStorage.clear();
-      window.location.reload();
-    };
-    const resetTimer = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(logout, 10 * 60 * 1000); // 10 min
-    };
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-    resetTimer();
-    return () => {
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-      clearTimeout(timeout);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!user || !token) return;
-
-    fetch(`${API_BASE}/user-data`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        setInitialData(data);
-      })
-      .catch(() => {
-        setInitialData({ Investments: {}, 'Real Estate': {}, Others: {} });
-      });
-  }, [user, token]);
-
-  const handleLogin = (username, token) => {
-    sessionStorage.setItem('username', username);
-    sessionStorage.setItem('token', token);
-    setUser(username);
-    setToken(token);
+  const logout = async () => {
+    await fetch(`${API_BASE}/logout`, { method: 'POST', credentials: 'include' });
+    setUser('');
+    setRole('');
+    setInitialData(null);
+    localStorage.clear();
+    window.location.href = '/';
   };
 
-  if (!user || !token) return <Login onLogin={handleLogin} />;
-  if (!initialData) return <div className="p-6 text-center">Cargando datos del usuario...</div>;
+  const fetchUserData = async () => {
+    try {
+      const adminRes = await fetch(`${API_BASE}/admin-only`, { credentials: 'include' });
+      if (adminRes.ok) {
+        const data = await adminRes.json();
+        setUser(data.username);
+        setRole('admin');
+      } else {
+        const userRes = await fetch(`${API_BASE}/user-data`, { credentials: 'include' });
+        if (!userRes.ok) throw new Error();
+        const data = await userRes.json();
+        setUser(data.username);
+        setRole('user');
+        setInitialData(data.data);
+      }
+    } catch (_) {
+      setUser('');
+      setRole('');
+      setInitialData(null);
+    } finally {
+      setAuthChecked(true);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const handleLogin = (username, role) => {
+    setUser(username);
+    setRole(role);
+    fetchUserData();
+  };
+
+  if (!authChecked) return <div className="p-6 text-center">Verificando sesión...</div>;
 
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
+    <Routes>
+      <Route
+        path="/"
+        element={
+          !user ? (
+            <Login onLogin={handleLogin} />
+          ) : initialData ? (
             <CategoryGroupsProvider initialData={initialData}>
-              <InnerApp user={user} />
+              <InnerApp user={user} onLogout={logout} />
             </CategoryGroupsProvider>
-          }
-        />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+          ) : (
+            <div className="p-6 text-center">Cargando datos del usuario...</div>
+          )
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          user && role === 'admin' ? (
+            <AdminPanel onLogout={logout} />
+          ) : (
+            <Login onLogin={handleLogin} />
+          )
+        }
+      />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
 
-export default App;
+export default function WrappedApp() {
+  return (
+    <Router>
+      <App />
+    </Router>
+  );
+}

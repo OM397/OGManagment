@@ -1,111 +1,83 @@
 // 📁 frontend/src/features/admin/AdminPanel.jsx
 import React, { useEffect, useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import Login from '../auth/Login';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [users, setUsers] = useState([]);
-  const [auth, setAuth] = useState({ username: '', token: '' });
+  const [auth, setAuth] = useState({ username: '' });
+  const navigate = useNavigate();
 
-  const fetchUsers = async (token) => {
+  const fetchUsers = async () => {
     try {
       const { data } = await axios.get('http://localhost:3001/api/admin/users', {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true
       });
       setUsers(data.users || []);
     } catch (err) {
-      setError('Error cargando usuarios');
+      setError('Error cargando usuarios.');
     }
   };
 
   const handleRoleToggle = async (username) => {
-    const token = sessionStorage.getItem('admin_token');
     if (!window.confirm(`¿Deseas cambiar el rol del usuario "${username}"?`)) return;
 
     try {
       const res = await axios.patch(`http://localhost:3001/api/admin/users/${username}/role`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true
       });
       alert(`✅ Rol actualizado a "${res.data.role}"`);
-      fetchUsers(token);
+      fetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Error al cambiar el rol.');
     }
   };
 
   const handleDelete = async (username) => {
-    const token = sessionStorage.getItem('admin_token');
     if (!window.confirm(`¿Seguro que quieres eliminar a "${username}"?`)) return;
 
     try {
       await axios.delete(`http://localhost:3001/api/admin/users/${username}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true
       });
       alert(`✅ Usuario "${username}" eliminado`);
-      fetchUsers(token);
+      fetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Error al eliminar usuario.');
     }
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('admin_token');
-    sessionStorage.removeItem('admin_username');
-    window.location.reload();
+  const handleLogout = async () => {
+    try {
+      await axios.post('http://localhost:3001/api/logout', {}, {
+        withCredentials: true
+      });
+    } catch (_) {}
+    navigate('/');
   };
 
   useEffect(() => {
-    const token = sessionStorage.getItem('admin_token');
-    if (!token) {
-      setAuth({ token: '', username: '' });
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { role, username } = jwtDecode(token);
-      if (role !== 'admin') {
-        sessionStorage.clear();
-        setAuth({ token: '', username: '' });
-        setError('Acceso denegado. Solo administradores.');
-        setLoading(false);
-        return;
-      }
-
-      setAuth({ token, username });
-
-      axios.get('http://localhost:3001/api/admin-only', {
-        headers: { Authorization: `Bearer ${token}` }
+    axios.get('http://localhost:3001/api/admin-only', {
+      withCredentials: true
+    })
+      .then(res => {
+        if (!res?.data?.username) throw new Error();
+        setAuth({ username: res.data.username });
+        setMessage(res.data.message || 'Bienvenido admin');
+        fetchUsers();
       })
-        .then(res => {
-          setMessage(res.data.message || `Bienvenido admin ${username}`);
-          fetchUsers(token);
-        })
-        .catch(err => {
-          setError(err.response?.data?.error || 'Error al validar admin');
-        })
-        .finally(() => setLoading(false));
-    } catch {
-      sessionStorage.clear();
-      setError('Token inválido.');
-      setAuth({ token: '', username: '' });
-      setLoading(false);
-    }
+      .catch(err => {
+        setError(err.response?.data?.error || 'Acceso denegado');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleLogin = (username, token) => {
-    sessionStorage.setItem('admin_username', username);
-    sessionStorage.setItem('admin_token', token);
-    window.location.reload();
-  };
-
   if (loading) return <p className="text-center mt-10">Cargando...</p>;
-  if (!auth.token) return <Login onLogin={handleLogin} />;
-  if (error) return <p className="text-center text-red-600">{error}</p>;
+  if (error || !auth.username) return <Login onLogin={() => navigate('/admin')} />;
 
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -130,7 +102,7 @@ export default function AdminPanel() {
             <th className="p-2 border">Usuario</th>
             <th className="p-2 border">Rol</th>
             <th className="p-2 border">Creado</th>
-            <th className="p-2 border">Último Login</th>
+            <th className="p-2 border">Ultimo Login</th>
             <th className="p-2 border">Acciones</th>
           </tr>
         </thead>

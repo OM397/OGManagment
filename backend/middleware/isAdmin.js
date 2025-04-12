@@ -3,17 +3,16 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 module.exports = function isAdmin(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = req.cookies.token; // ← leer token desde la cookie
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-
     if (decoded.role !== 'admin') {
       return res.status(403).json({ error: 'Acceso restringido a administradores.' });
     }
 
-    req.user = decoded; // ✅ mantenemos username y role disponibles
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(403).json({ error: 'Token inválido.' });
