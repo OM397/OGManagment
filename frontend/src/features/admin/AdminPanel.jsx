@@ -1,12 +1,10 @@
 // 📁 frontend/src/features/admin/AdminPanel.jsx
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import Login from '../auth/Login';
 
 export default function AdminPanel() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -16,23 +14,16 @@ export default function AdminPanel() {
   const fetchUsers = async (token) => {
     try {
       const { data } = await axios.get('http://localhost:3001/api/admin/users', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (Array.isArray(data.users)) {
-        setUsers(data.users);
-      } else {
-        console.warn('⚠️ No se recibieron usuarios');
-        setUsers([]);
-      }
+      setUsers(data.users || []);
     } catch (err) {
-      console.error('❌ Error en fetchUsers:', err);
       setError('Error cargando usuarios');
     }
   };
 
   const handleRoleToggle = async (username) => {
-    const token = localStorage.getItem('admin_token');
+    const token = sessionStorage.getItem('admin_token');
     if (!window.confirm(`¿Deseas cambiar el rol del usuario "${username}"?`)) return;
 
     try {
@@ -47,7 +38,7 @@ export default function AdminPanel() {
   };
 
   const handleDelete = async (username) => {
-    const token = localStorage.getItem('admin_token');
+    const token = sessionStorage.getItem('admin_token');
     if (!window.confirm(`¿Seguro que quieres eliminar a "${username}"?`)) return;
 
     try {
@@ -62,13 +53,13 @@ export default function AdminPanel() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_username');
+    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem('admin_username');
     window.location.reload();
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
+    const token = sessionStorage.getItem('admin_token');
     if (!token) {
       setAuth({ token: '', username: '' });
       setLoading(false);
@@ -78,8 +69,7 @@ export default function AdminPanel() {
     try {
       const { role, username } = jwtDecode(token);
       if (role !== 'admin') {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_username');
+        sessionStorage.clear();
         setAuth({ token: '', username: '' });
         setError('Acceso denegado. Solo administradores.');
         setLoading(false);
@@ -99,10 +89,8 @@ export default function AdminPanel() {
           setError(err.response?.data?.error || 'Error al validar admin');
         })
         .finally(() => setLoading(false));
-
     } catch {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_username');
+      sessionStorage.clear();
       setError('Token inválido.');
       setAuth({ token: '', username: '' });
       setLoading(false);
@@ -110,8 +98,8 @@ export default function AdminPanel() {
   }, []);
 
   const handleLogin = (username, token) => {
-    localStorage.setItem('admin_username', username);
-    localStorage.setItem('admin_token', token);
+    sessionStorage.setItem('admin_username', username);
+    sessionStorage.setItem('admin_token', token);
     window.location.reload();
   };
 

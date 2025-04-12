@@ -1,11 +1,11 @@
 // 📁 frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import './shared/styles/index.css';
-import Sidebar from './shared/Sidebar';
-import Topbar from './shared/Topbar';
-import Portfolio from './features/portfolio/Portfolio';
-import useMarketData from './features/assets/useMarketData';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import "./shared/styles/index.css";
+import Sidebar from "./shared/Sidebar";
+import Topbar from "./shared/Topbar";
+import Portfolio from "./features/portfolio/Portfolio";
+import useMarketData from "./features/assets/useMarketData";
 import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/CategoryGroupsContext';
 import Login from './features/auth/Login';
 import AdminPanel from './features/admin/AdminPanel';
@@ -19,7 +19,7 @@ function InnerApp({ user }) {
 
   let totalValue = 0;
   Object.values(categoryGroups || {}).forEach(category => {
-    if (typeof category === 'object' && category !== null) {
+    if (typeof category === 'object') {
       Object.values(category).forEach(group => {
         if (Array.isArray(group)) {
           group.forEach(asset => {
@@ -54,7 +54,26 @@ function App() {
   const [user, setUser] = useState(sessionStorage.getItem('username') || '');
   const [token, setToken] = useState(sessionStorage.getItem('token') || '');
   const [initialData, setInitialData] = useState(null);
-  const location = useLocation();
+
+  useEffect(() => {
+    let timeout;
+    const logout = () => {
+      sessionStorage.clear();
+      window.location.reload();
+    };
+    const resetTimer = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(logout, 10 * 60 * 1000); // 10 min
+    };
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    resetTimer();
+    return () => {
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      clearTimeout(timeout);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user || !token) return;
@@ -81,30 +100,22 @@ function App() {
   if (!user || !token) return <Login onLogin={handleLogin} />;
   if (!initialData) return <div className="p-6 text-center">Cargando datos del usuario...</div>;
 
-  const isAdminPath = location.pathname === '/admin';
-
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          !isAdminPath && (
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
             <CategoryGroupsProvider initialData={initialData}>
               <InnerApp user={user} />
             </CategoryGroupsProvider>
-          )
-        }
-      />
-      <Route path="/admin" element={<AdminPanel />} />
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
-  );
-}
-
-export default function WrappedApp() {
-  return (
-    <Router>
-      <App />
+          }
+        />
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
     </Router>
   );
 }
+
+export default App;

@@ -1,17 +1,18 @@
+// 📁 frontend/src/shared/Topbar.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCw, UserCircle, ChevronDown } from 'lucide-react';
 
 export default function Topbar({ currency = 'EUR €', onReload = () => {}, user }) {
-  const username = user || localStorage.getItem('username');
+  const username = user || sessionStorage.getItem('username');
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const handleLogout = () => {
-    localStorage.removeItem('username');
+    sessionStorage.removeItem('username');
+    sessionStorage.removeItem('token');
     window.location.reload();
   };
 
-  // Cerrar el menú si se hace click fuera
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
