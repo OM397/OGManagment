@@ -11,18 +11,27 @@ export default function AdminPanel() {
   const [users, setUsers] = useState([]);
 
   const fetchUsers = async (token) => {
-    const res = await axios.get('http://localhost:3001/api/admin/users', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setUsers(res.data.users || []);
+    try {
+      const res = await axios.get('http://localhost:3001/api/admin/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(res.data.users || []);
+    } catch (err) {
+      setError('Error cargando usuarios');
+    }
   };
 
   const handleRoleToggle = async (username) => {
     const token = localStorage.getItem('token');
+    const confirmChange = window.confirm(`¿Deseas cambiar el rol del usuario "${username}"?`);
+    if (!confirmChange) return;
+
     try {
-      await axios.patch(`http://localhost:3001/api/admin/users/${username}/role`, {}, {
+      const res = await axios.patch(`http://localhost:3001/api/admin/users/${username}/role`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      alert(`✅ Rol actualizado a "${res.data.role}"`);
       fetchUsers(token);
     } catch (err) {
       alert(err.response?.data?.error || 'Error al cambiar el rol.');
@@ -31,10 +40,15 @@ export default function AdminPanel() {
 
   const handleDelete = async (username) => {
     const token = localStorage.getItem('token');
+    const confirmDelete = window.confirm(`¿Seguro que quieres eliminar a "${username}"?`);
+    if (!confirmDelete) return;
+
     try {
       await axios.delete(`http://localhost:3001/api/admin/users/${username}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      alert(`✅ Usuario "${username}" eliminado`);
       fetchUsers(token);
     } catch (err) {
       alert(err.response?.data?.error || 'Error al eliminar usuario.');
