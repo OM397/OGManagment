@@ -1,4 +1,3 @@
-// 📁 backend/models/User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -17,11 +16,17 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  lastLogin: {
+    type: Date,
+    default: null
+  },
   data: {
     Investments: { type: Object, default: {} },
     RealEstate: { type: Object, default: {} },
     Others: { type: Object, default: {} }
   }
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
 module.exports = mongoose.model('User', userSchema);

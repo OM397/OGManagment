@@ -83,12 +83,48 @@ app.post('/api/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
 
+    // 🕒 Registrar último login
+    user.lastLogin = new Date();
+    await user.save();
+
     const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
     res.status(200).json({ success: true, token, username, role: user.role });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
+
+// 👤 Eliminar usuario (protegido admin)
+app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, res) => {
+  const { username } = req.params;
+  if (username === 'admin') return res.status(403).json({ error: 'No se puede eliminar el usuario admin.' });
+
+  try {
+    await User.deleteOne({ username });
+    res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error eliminando usuario.' });
+  }
+});
+
+// 🔁 Cambiar rol (protegido admin)
+app.patch('/api/admin/users/:username/role', authMiddleware, isAdmin, async (req, res) => {
+  const { username } = req.params;
+  if (username === 'admin') return res.status(403).json({ error: 'No se puede cambiar el rol del usuario admin.' });
+
+  try {
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    user.role = user.role === 'admin' ? 'user' : 'admin';
+    await user.save();
+
+    res.status(200).json({ success: true, role: user.role });
+  } catch (err) {
+    res.status(500).json({ error: 'Error actualizando rol.' });
+  }
+});
+
 
 // 📦 Obtener datos del usuario
 app.get('/api/user-data', authMiddleware, async (req, res) => {
