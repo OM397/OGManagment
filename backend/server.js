@@ -117,9 +117,19 @@ app.post('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
-// 🔐 Ruta admin
+// 🔐 Ruta admin - solo acceso
 app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
   res.json({ message: `👑 Bienvenido admin ${req.user.username}` });
+});
+
+// 📋 Ruta admin - obtener todos los usuarios
+app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
+  try {
+    const users = await User.find({}, 'username role createdAt').sort({ createdAt: -1 });
+    res.status(200).json({ users });
+  } catch (err) {
+    res.status(500).json({ error: 'No se pudieron cargar los usuarios.' });
+  }
 });
 
 // 📁 Serve frontend static (si aplica)
