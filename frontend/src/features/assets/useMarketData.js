@@ -8,8 +8,6 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
   const [tickersData, setTickersData] = useState({ cryptos: [], stocks: [] });
   const [error, setError] = useState(null);
 
-  const token = localStorage.getItem('token');
-
   useEffect(() => {
     fetch(`${API_BASE}/tickers`)
       .then(res => res.json())
@@ -19,7 +17,6 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
 
   useEffect(() => {
     if (!tickersData.cryptos.length && !tickersData.stocks.length) return;
-    if (!token) return;
 
     const symbolToId = Object.fromEntries(tickersData.cryptos.map(t => [t.symbol.toLowerCase(), t.id]));
     const nameToId = Object.fromEntries(tickersData.cryptos.map(t => [t.name.toLowerCase(), t.id]));
@@ -53,9 +50,9 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
         const response = await fetch(`${API_BASE}/market-data`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
+            'Content-Type': 'application/json'
           },
+          credentials: 'include',
           body: JSON.stringify(tickerList)
         });
 
@@ -76,7 +73,7 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
 
     const interval = setInterval(() => fetchMarketData(collectTickers()), 90000);
     return () => clearInterval(interval);
-  }, [categoryGroups, reloadTrigger, tickersData, token]);
+  }, [categoryGroups, reloadTrigger, tickersData]);
 
   return { marketData, error };
 }

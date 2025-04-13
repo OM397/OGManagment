@@ -2,16 +2,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCw, UserCircle, ChevronDown } from 'lucide-react';
 
-export default function Topbar({ currency = 'EUR €', onReload = () => {}, user }) {
+export default function Topbar({ currency = 'EUR €', onReload = () => {}, user, onLogout }) {
   const username = user || sessionStorage.getItem('username');
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('username');
-    sessionStorage.removeItem('token');
-    window.location.reload();
-  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -47,7 +41,7 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
           {open && (
             <div className="absolute right-0 mt-2 w-36 bg-white border rounded shadow-md z-10">
               <button
-                onClick={handleLogout}
+                onClick={onLogout}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
                 Cerrar sesión

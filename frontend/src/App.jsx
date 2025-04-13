@@ -9,6 +9,8 @@ import useMarketData from './features/assets/useMarketData';
 import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/CategoryGroupsContext';
 import LoginWithRedirect from './features/auth/LoginWithRedirect';
 import AdminPanel from './features/admin/AdminPanel';
+import RequireAuth from './shared/auth/RequireAuth';
+import RequireAdmin from './shared/auth/RequireAdmin';
 import { API_BASE } from './shared/config';
 
 function InnerApp({ user, onLogout }) {
@@ -63,39 +65,25 @@ function App() {
     setRole('');
     setInitialData(null);
     localStorage.clear();
+    sessionStorage.clear();
     navigate('/');
   };
 
   const fetchUserData = async () => {
     try {
-      console.log('⏳ Verificando sesión...');
-
       const userInfo = await fetch(`${API_BASE}/user`, { credentials: 'include' });
-      const rawCookie = document.cookie;
-      console.log('🍪 Cookie actual:', rawCookie);
-
-      if (!userInfo.ok) {
-        console.log('❌ /user falló con status', userInfo.status);
-        throw new Error('Fallo al obtener usuario');
-      }
-
+      if (!userInfo.ok) throw new Error('Fallo al obtener usuario');
       const { username, role } = await userInfo.json();
-      console.log('✅ Usuario autenticado:', { username, role });
       setUser(username);
       setRole(role);
+      sessionStorage.setItem('username', username);
 
       const userData = await fetch(`${API_BASE}/user-data`, { credentials: 'include' });
-      if (!userData.ok) {
-        console.log('❌ /user-data falló con status', userData.status);
-        throw new Error('Fallo al obtener datos');
-      }
-
+      if (!userData.ok) throw new Error('Fallo al obtener datos');
       const result = await userData.json();
       const data = result?.data || {};
-      console.log('📦 Datos del usuario:', data);
       setInitialData(data);
-    } catch (err) {
-      console.log('⚠️ Sesión inválida o error:', err);
+    } catch (_) {
       setUser('');
       setRole('');
       setInitialData(null);
@@ -123,23 +111,21 @@ function App() {
         element={
           !user ? (
             <LoginWithRedirect />
-          ) : initialData ? (
-            <CategoryGroupsProvider initialData={initialData}>
-              <InnerApp user={user} onLogout={logout} />
-            </CategoryGroupsProvider>
           ) : (
-            <div className="p-6 text-center">Cargando datos del usuario...</div>
+            <RequireAuth user={user}>
+              <CategoryGroupsProvider key={user} initialData={initialData}>
+                <InnerApp user={user} onLogout={logout} />
+              </CategoryGroupsProvider>
+            </RequireAuth>
           )
         }
       />
       <Route
         path="/admin"
         element={
-          user && role === 'admin' ? (
+          <RequireAdmin user={user} role={role}>
             <AdminPanel onLogout={logout} />
-          ) : (
-            <LoginWithRedirect />
-          )
+          </RequireAdmin>
         }
       />
       <Route path="*" element={<Navigate to="/" />} />

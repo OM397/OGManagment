@@ -110,7 +110,11 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-  res.clearCookie('token', COOKIE_OPTIONS);
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: !isDev,
+    sameSite: isDev ? 'Lax' : 'Strict'
+  });
   res.status(200).json({ success: true });
 });
 
@@ -160,8 +164,11 @@ app.post('/api/user-data', authMiddleware, async (req, res) => {
     const user = await User.findOne({ username: req.user.username });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
-    user.data = req.body;
+    if (!req.body?.data) return res.status(400).json({ error: 'Falta el objeto data.' });
+
+    user.data = req.body.data;
     await user.save();
+
     res.status(200).json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'No se pudo guardar la data del usuario.' });
@@ -181,7 +188,6 @@ app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ Ruta nueva: datos básicos del usuario desde el token JWT
 app.get('/api/user', authMiddleware, (req, res) => {
   const { username, role } = req.user || {};
   if (!username || !role) {

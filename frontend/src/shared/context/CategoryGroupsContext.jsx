@@ -8,60 +8,52 @@ const CategoryGroupsContext = createContext();
 export const useCategoryGroups = () => useContext(CategoryGroupsContext);
 
 export const CategoryGroupsProvider = ({ initialData, children }) => {
-  const [categoryGroups, setCategoryGroupsState] = useState(initialData || {
-    Investments: {},
-    'Real Estate': {},
-    Others: {}
-  });
+  const [categoryGroups, setCategoryGroupsState] = useState(null);
+  const timeoutRef = useRef(null);
+  const isInitialLoadDone = useRef(false);
 
-  const isFirstRender = useRef(true);
-  const hasPendingChanges = useRef(false);
-
-  useEffect(() => {
-    setCategoryGroupsState(initialData || {
-      Investments: {},
-      'Real Estate': {},
-      Others: {}
-    });
-  }, [initialData]);
-
-  const saveUserData = async (data) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
+  const saveUserData = async (categoryGroupsToSave) => {
+    if (!categoryGroupsToSave) return;
     try {
-      await axios.post(`${API_BASE}/user-data`, data, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      console.log('💾 Datos guardados correctamente en el backend');
+      await axios.post(
+        `${API_BASE}/user-data`,
+        { data: categoryGroupsToSave },
+        { withCredentials: true }
+      );
+      console.log('💾 Datos guardados correctamente');
     } catch (err) {
-      console.error('❌ Error al guardar datos en el backend:', err);
+      console.error('❌ Error al guardar datos en backend:', err);
     }
   };
 
   const setCategoryGroups = (updater) => {
     setCategoryGroupsState(prev => {
       const updated = typeof updater === 'function' ? updater(prev) : updater;
-      hasPendingChanges.current = true;
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        saveUserData(updated);
+      }, 1000);
       return updated;
     });
   };
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
+    if (!isInitialLoadDone.current && initialData) {
+      setCategoryGroupsState(initialData);
+      isInitialLoadDone.current = true;
     }
-    if (hasPendingChanges.current) {
-      saveUserData(categoryGroups);
-      hasPendingChanges.current = false;
-    }
-  }, [categoryGroups]);
+  }, [initialData]);
+
+  const defaultGroups = {
+    Investments: {},
+    'Real Estate': {},
+    Others: {}
+  };
 
   return (
-    <CategoryGroupsContext.Provider value={{ categoryGroups, setCategoryGroups }}>
+    <CategoryGroupsContext.Provider
+      value={{ categoryGroups: categoryGroups || defaultGroups, setCategoryGroups }}
+    >
       {children}
     </CategoryGroupsContext.Provider>
   );
