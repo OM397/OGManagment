@@ -1,11 +1,27 @@
 // 📁 frontend/src/shared/Topbar.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCw, UserCircle, ChevronDown } from 'lucide-react';
+import { API_BASE } from './config';
+
 
 export default function Topbar({ currency = 'EUR €', onReload = () => {}, user, onLogout }) {
-  const username = user || sessionStorage.getItem('username');
-  const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [username, setUsername] = useState(user || sessionStorage.getItem('username') || '');
+
+  useEffect(() => {
+    if (!username) {
+      fetch(`${API_BASE}/user`, { credentials: 'include' })
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data?.username) {
+            setUsername(data.username);
+            sessionStorage.setItem('username', data.username);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [username]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -34,7 +50,7 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
             className="flex items-center gap-2 text-sm text-gray-700 hover:text-black transition"
           >
             <UserCircle size={20} className="text-gray-400" />
-            <span>{username}</span>
+            <span>{username || 'Cargando...'}</span>
             <ChevronDown size={16} />
           </button>
 

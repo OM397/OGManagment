@@ -7,17 +7,20 @@ export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
     if (!trimmedUsername || !trimmedPassword) {
       setError('Por favor, complete ambos campos.');
+      setLoading(false);
       return;
     }
 
@@ -43,11 +46,13 @@ export default function Login({ onLogin }) {
       sessionStorage.setItem('username', trimmedUsername);
       sessionStorage.setItem('role', response.data.role || '');
 
-      if (onLogin) onLogin(); // notifica login exitoso
+      onLogin?.(); // Notifica login exitoso
 
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Error en la autenticación';
       setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,9 +79,12 @@ export default function Login({ onLogin }) {
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          disabled={loading}
+          className={`w-full p-2 rounded text-white ${
+            loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
-          {isRegistering ? 'Crear cuenta' : 'Entrar'}
+          {loading ? 'Procesando...' : isRegistering ? 'Crear cuenta' : 'Entrar'}
         </button>
         <button
           type="button"

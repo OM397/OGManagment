@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 module.exports = function isAdmin(req, res, next) {
-  const token = req.cookies.token; // ← leer token desde la cookie
+  const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
 
   try {
