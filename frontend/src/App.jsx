@@ -53,9 +53,9 @@ function InnerApp({ user, onLogout }) {
 }
 
 function App() {
-  const [user, setUser] = useState('');
+  const [user, setUser] = useState(() => sessionStorage.getItem('username') || '');
+  const [role, setRole] = useState(() => sessionStorage.getItem('role') || '');
   const [initialData, setInitialData] = useState(null);
-  const [role, setRole] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const navigate = useNavigate();
 
@@ -77,12 +77,12 @@ function App() {
       setUser(username);
       setRole(role);
       sessionStorage.setItem('username', username);
+      sessionStorage.setItem('role', role);
 
       const userData = await fetch(`${API_BASE}/user-data`, { credentials: 'include' });
       if (!userData.ok) throw new Error('Fallo al obtener datos');
       const result = await userData.json();
-      const data = result?.data || {};
-      setInitialData(data);
+      setInitialData(result?.data || {});
     } catch (_) {
       setUser('');
       setRole('');
@@ -96,10 +96,8 @@ function App() {
     fetchUserData();
   }, []);
 
-  const handleLogin = (username, role) => {
-    setUser(username);
-    setRole(role);
-    fetchUserData();
+  const handleLogin = () => {
+    fetchUserData(); // login exitoso → rehidrata usuario y data
   };
 
   if (!authChecked) return <div className="p-6 text-center">Verificando sesión...</div>;
@@ -110,7 +108,7 @@ function App() {
         path="/"
         element={
           !user ? (
-            <LoginWithRedirect />
+            <LoginWithRedirect onLogin={handleLogin} />
           ) : (
             <RequireAuth user={user}>
               <CategoryGroupsProvider key={user} initialData={initialData}>

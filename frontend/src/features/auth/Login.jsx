@@ -2,14 +2,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../../shared/config';
-import { useNavigate } from 'react-router-dom';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,13 +35,16 @@ export default function Login({ onLogin }) {
         }
       );
 
-      if (!response?.data?.success || !response.data.role) {
+      if (!response?.data?.success) {
         throw new Error('Login fallido.');
       }
 
       localStorage.clear();
-      onLogin(trimmedUsername, response.data.role);
-      window.location.href = response.data.role === 'admin' ? '/admin' : '/';
+      sessionStorage.setItem('username', trimmedUsername);
+      sessionStorage.setItem('role', response.data.role || '');
+
+      if (onLogin) onLogin(); // notifica login exitoso
+
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Error en la autenticación';
       setError(msg);

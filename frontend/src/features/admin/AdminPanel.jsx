@@ -57,6 +57,10 @@ export default function AdminPanel() {
         withCredentials: true
       });
     } catch (_) {}
+    
+    // Limpia sesión antes de navegar
+    localStorage.clear();
+    sessionStorage.clear();
     navigate('/');
   };
 
