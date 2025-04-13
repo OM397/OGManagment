@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const tickersRoutes = require('./routes/tickersRoutes');
@@ -38,6 +39,13 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
+// 💥 Rate limit config
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 20, // máximo 20 intentos por IP
+  message: { error: 'Demasiados intentos. Intenta más tarde.' }
+});
+
 function authMiddleware(req, res, next) {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
@@ -61,7 +69,7 @@ const COOKIE_OPTIONS = {
   maxAge: 60 * 60 * 1000
 };
 
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', authLimiter, async (req, res) => {
   const { username, password, role = 'user' } = req.body;
 
   if (!username || !password || username.length < 3 || password.length < 5) {
@@ -86,7 +94,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   try {
