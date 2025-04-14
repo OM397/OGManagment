@@ -31,18 +31,28 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
+// ✅ Nuevo bloque CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://amusing-intuition-production.up.railway.app'
+];
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`❌ No permitido por CORS: ${origin}`));
+    }
+  },
   credentials: true
 }));
 
 app.use(cookieParser());
 app.use(express.json());
 
-// 💥 Rate limit config
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 20, // máximo 20 intentos por IP
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: { error: 'Demasiados intentos. Intenta más tarde.' }
 });
 
