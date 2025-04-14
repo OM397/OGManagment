@@ -2,5 +2,10 @@
 
 export const CATEGORIES = ['Investments', 'Real Estate', 'Others'];
 
-// 🌐 Base URL del backend
-export const API_BASE = 'http://localhost:3001/api';
+// Detecta si estamos en producción
+const isProduction = import.meta.env.PROD;
+
+// Usa la URL local o la del backend en Railway
+export const API_BASE = isProduction
+  ? 'https://ogmanagment-production.up.railway.app/api' // tu backend en Railway
+  : 'http://localhost:3001/api';
