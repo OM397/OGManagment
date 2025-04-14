@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Login from '../auth/Login';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from '../../shared/config';
 
 export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
@@ -14,7 +15,7 @@ export default function AdminPanel() {
 
   const fetchUsers = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3001/api/admin/users', {
+      const { data } = await axios.get(`${API_BASE}/admin/users`, {
         withCredentials: true
       });
       setUsers(data.users || []);
@@ -27,7 +28,7 @@ export default function AdminPanel() {
     if (!window.confirm(`¿Deseas cambiar el rol del usuario "${username}"?`)) return;
 
     try {
-      const res = await axios.patch(`http://localhost:3001/api/admin/users/${username}/role`, {}, {
+      const res = await axios.patch(`${API_BASE}/admin/users/${username}/role`, {}, {
         withCredentials: true
       });
       alert(`✅ Rol actualizado a "${res.data.role}"`);
@@ -41,7 +42,7 @@ export default function AdminPanel() {
     if (!window.confirm(`¿Seguro que quieres eliminar a "${username}"?`)) return;
 
     try {
-      await axios.delete(`http://localhost:3001/api/admin/users/${username}`, {
+      await axios.delete(`${API_BASE}/admin/users/${username}`, {
         withCredentials: true
       });
       alert(`✅ Usuario "${username}" eliminado`);
@@ -53,19 +54,17 @@ export default function AdminPanel() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3001/api/logout', {}, {
+      await axios.post(`${API_BASE}/logout`, {}, {
         withCredentials: true
       });
     } catch (_) {}
-    
-    // Limpia sesión antes de navegar
     localStorage.clear();
     sessionStorage.clear();
     navigate('/');
   };
 
   useEffect(() => {
-    axios.get('http://localhost:3001/api/admin-only', {
+    axios.get(`${API_BASE}/admin-only`, {
       withCredentials: true
     })
       .then(res => {
