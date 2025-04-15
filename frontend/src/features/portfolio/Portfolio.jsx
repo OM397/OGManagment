@@ -135,7 +135,7 @@ export default function Portfolio({ initialData, exchangeRates }) {
   };
 
   return (
-    <div>
+    <div className="px-4 sm:px-6 md:px-8">
       <AssetsSummary
         activeTab={activeTab}
         groups={Object.keys(normalizedGroups)}
@@ -144,7 +144,7 @@ export default function Portfolio({ initialData, exchangeRates }) {
         exchangeRates={exchangeRates}
       />
 
-      <div className="flex space-x-6 mb-6 border-b border-gray-200 text-sm font-medium">
+      <div className="flex flex-wrap gap-4 mb-6 border-b border-gray-200 text-sm font-medium">
         {CATEGORIES.map(cat => {
           const isActive = activeTab === cat;
           const total = getCategoryTotal(cat);
@@ -154,7 +154,7 @@ export default function Portfolio({ initialData, exchangeRates }) {
             <button
               key={cat}
               onClick={() => setActiveTab(cat)}
-              className={`pb-2 transition-colors duration-200 flex flex-col items-center ${
+              className={`pb-2 flex-1 min-w-[100px] sm:min-w-[150px] transition-colors duration-200 flex flex-col items-center text-center ${
                 isActive
                   ? 'text-black border-b-2 border-black font-semibold'
                   : 'text-gray-400 hover:text-black'
