@@ -15,12 +15,13 @@ export default function GroupSummary({ initialTotal, actualTotal }) {
           : 'text-gray-500';
 
   return (
-    <div className="flex justify-end items-center px-5 py-4 bg-gray-50 shadow-inner text-sm font-medium">
-      <div className="text-right">
+    <div className="flex flex-col sm:flex-row justify-between sm:justify-end items-start sm:items-center gap-2 px-5 py-4 bg-gray-50 shadow-inner text-sm font-medium">
+      <div className="text-left sm:text-right">
         <div className="text-sm font-bold">{formatter.format(actualTotal)}</div>
         <div className="text-xs text-gray-400">vs {formatter.format(initialTotal)}</div>
       </div>
-      <div className="flex flex-col items-end justify-center text-xs font-medium ml-4">
+
+      <div className="flex flex-col items-end text-xs font-medium ml-0 sm:ml-4">
         <div className={`px-2 py-0.5 mb-0.5 border ${
           diff >= 0
             ? 'bg-green-50 text-green-600 border-green-100'
