@@ -7,15 +7,12 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const isRailway = process.env.RAILWAY_ENV === 'production' || process.env.NODE_ENV === 'production';
-const routesBase = isRailway ? './routes' : './backend/routes';
-const middlewareBase = isRailway ? './middleware' : './backend/middleware';
-
-const tickersRoutes = require(`${routesBase}/tickersRoutes`);
-const authRoutes = require(`${routesBase}/authRoutes`);
-const adminRoutes = require(`${routesBase}/adminRoutes`);
-const userRoutes = require(`${routesBase}/userRoutes`);
-const authMiddleware = require(`${middlewareBase}/authMiddleware`);
+// ✅ USAR rutas relativas al archivo actual, sin backend/
+const tickersRoutes = require('./routes/tickersRoutes');
+const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const userRoutes = require('./routes/userRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -62,11 +59,11 @@ const authLimiter = rateLimit({
 
 // ✅ Rutas principales
 app.use('/api', tickersRoutes);
-app.use('/api', authRoutes);   // login, register, logout
+app.use('/api', authRoutes);
 
 // ✅ Rutas protegidas
-app.use('/api', userRoutes);   // user, user-data, change-password
-app.use('/api', adminRoutes);  // admin-only, admin/users
+app.use('/api', userRoutes);
+app.use('/api', adminRoutes);
 
 // ✅ SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));
