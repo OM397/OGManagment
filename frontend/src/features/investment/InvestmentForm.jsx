@@ -123,24 +123,28 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
   return (
     <div className="bg-white p-4 rounded shadow mb-4">
       <h3 className="font-bold mb-2 text-gray-800">New Investment</h3>
+
       <div className="mb-2">{renderAssetInput()}</div>
+
       <InvestmentFormFields
         activeTab={activeTab}
         formData={formData}
         setFormData={setFormData}
         categoryGroups={categoryGroups}
       />
-      <div className="flex gap-2 justify-end">
+
+      <div className="flex flex-col sm:flex-row gap-2 justify-end mt-4">
         <button
           onClick={handleAdd}
-          className="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded transition"
+          className="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded transition w-full sm:w-auto"
         >
           Add
         </button>
+
         {!showInline && (
           <button
             onClick={onClose}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded transition"
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded transition w-full sm:w-auto"
           >
             Cancel
           </button>
