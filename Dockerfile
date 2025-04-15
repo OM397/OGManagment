@@ -14,7 +14,8 @@
     RUN npm install
     
     # ✅ Copy backend code and server entry
-    COPY server.js ./
+    COPY backend/server.js ./
+
     COPY backend ./backend
     COPY frontend ./frontend
     
