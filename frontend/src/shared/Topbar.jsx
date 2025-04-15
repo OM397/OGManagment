@@ -1,10 +1,10 @@
 // 📁 frontend/src/shared/Topbar.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import { RefreshCw, UserCircle, ChevronDown } from 'lucide-react';
+import { RefreshCw, UserCircle, ChevronDown, Menu } from 'lucide-react';
 import { API_BASE } from './config';
 import ChangePasswordModal from './ChangePasswordModal';
 
-export default function Topbar({ currency = 'EUR €', onReload = () => {}, user, onLogout }) {
+export default function Topbar({ currency = 'EUR €', onReload = () => {}, user, onLogout, onToggleSidebar }) {
   const dropdownRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -36,7 +36,15 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
 
   return (
     <header className="flex justify-between items-center py-3 px-6 border-b bg-white mb-6">
-      <div className="text-xs text-gray-500">Portfolio</div>
+      <div className="flex items-center gap-4">
+        <button
+          className="md:hidden text-gray-600 hover:text-black"
+          onClick={onToggleSidebar}
+        >
+          <Menu size={20} />
+        </button>
+        <div className="text-xs text-gray-500">Portfolio</div>
+      </div>
 
       <div className="flex items-center gap-6">
         <button onClick={onReload} className="text-gray-500 hover:text-black transition">

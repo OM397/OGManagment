@@ -11,6 +11,7 @@ export default function InnerApp({ user, onLogout }) {
   const [selected, setSelected] = useState('Assets');
   const [exchangeRates] = useState({ EUR: 1, USD: 1.1, GBP: 0.85 });
   const { marketData } = useMarketData(categoryGroups || {}, 0);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   let totalValue = 0;
   Object.values(categoryGroups || {}).forEach(category => {
@@ -34,12 +35,15 @@ export default function InnerApp({ user, onLogout }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <div className="md:block hidden">
-        <Sidebar selected={selected} setSelected={setSelected} totalValue={totalValue} />
-      </div>
+      {(showSidebar || window.innerWidth >= 768) && (
+        <div className="md:block">
+          <Sidebar selected={selected} setSelected={setSelected} totalValue={totalValue} />
+        </div>
+      )}
+
       <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 bg-white">
         <div className="max-w-5xl mx-auto">
-          <Topbar user={user} onLogout={onLogout} />
+          <Topbar user={user} onLogout={onLogout} onToggleSidebar={() => setShowSidebar(prev => !prev)} />
           {selected === 'Assets' && (
             <Portfolio initialData={categoryGroups} exchangeRates={exchangeRates} />
           )}
