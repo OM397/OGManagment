@@ -10,7 +10,6 @@ import { CategoryGroupsProvider, useCategoryGroups } from './shared/context/Cate
 import LoginWithRedirect from './features/auth/LoginWithRedirect';
 import AdminPanel from './features/admin/AdminPanel';
 import RequireAuth from './shared/auth/RequireAuth';
-import RequireAdmin from './shared/auth/RequireAdmin';
 import { API_BASE } from './shared/config';
 
 function InnerApp({ user, onLogout }) {
@@ -52,9 +51,43 @@ function InnerApp({ user, onLogout }) {
   );
 }
 
-function MainApp() {
-  const [user, setUser] = useState(() => sessionStorage.getItem('username') || '');
-  const [role, setRole] = useState(() => sessionStorage.getItem('role') || '');
+function AppRoutes({ user, role, initialData, onLogout, onLogin }) {
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          !user ? (
+            <LoginWithRedirect onLogin={onLogin} />
+          ) : (
+            <RequireAuth user={user}>
+              <CategoryGroupsProvider key={user} initialData={initialData}>
+                <InnerApp user={user} onLogout={onLogout} />
+              </CategoryGroupsProvider>
+            </RequireAuth>
+          )
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          !user ? (
+            <LoginWithRedirect onLogin={onLogin} />
+          ) : role === 'admin' ? (
+            <AdminPanel onLogout={onLogout} />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState('');
+  const [role, setRole] = useState('');
   const [initialData, setInitialData] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const navigate = useNavigate();
@@ -71,24 +104,32 @@ function MainApp() {
 
   const fetchUserData = async () => {
     const token = sessionStorage.getItem('token');
-    if (!token) return setAuthChecked(true);
+    if (!token) {
+      console.warn('⚠️ No token en sessionStorage');
+      setAuthChecked(true);
+      return;
+    }
 
     try {
-      const userInfo = await fetch(`${API_BASE}/user`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const resUser = await fetch(`${API_BASE}/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
-      if (!userInfo.ok) throw new Error('Fallo al obtener usuario');
-      const { username, role } = await userInfo.json();
+      if (!resUser.ok) throw new Error('❌ Error user');
+      const { username, role } = await resUser.json();
       setUser(username);
       setRole(role);
       sessionStorage.setItem('username', username);
       sessionStorage.setItem('role', role);
 
-      const userData = await fetch(`${API_BASE}/user-data`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const resData = await fetch(`${API_BASE}/user-data`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
-      if (!userData.ok) throw new Error('Fallo al obtener datos');
-      const result = await userData.json();
+      if (!resData.ok) throw new Error('❌ Error data');
+      const result = await resData.json();
       setInitialData(result?.data || {});
     } catch (err) {
       setUser('');
@@ -103,45 +144,23 @@ function MainApp() {
     fetchUserData();
   }, []);
 
-  const handleLogin = () => {
-    fetchUserData(); // login exitoso → rehidrata usuario y data
-  };
-
   if (!authChecked) return <div className="p-6 text-center">Verificando sesión...</div>;
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          !user ? (
-            <LoginWithRedirect onLogin={handleLogin} />
-          ) : (
-            <RequireAuth user={user}>
-              <CategoryGroupsProvider key={user} initialData={initialData}>
-                <InnerApp user={user} onLogout={logout} />
-              </CategoryGroupsProvider>
-            </RequireAuth>
-          )
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <RequireAdmin user={user} role={role}>
-            <AdminPanel onLogout={logout} />
-          </RequireAdmin>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+    <AppRoutes
+      user={user}
+      role={role}
+      initialData={initialData}
+      onLogout={logout}
+      onLogin={fetchUserData}
+    />
   );
 }
 
 export default function WrappedApp() {
   return (
     <Router>
-      <MainApp />
+      <App />
     </Router>
   );
 }
