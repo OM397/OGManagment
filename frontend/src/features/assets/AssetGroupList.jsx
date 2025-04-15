@@ -1,3 +1,4 @@
+// 📁 frontend/features/assets/AssetGroupList.jsx
 import React, { useState, useEffect } from 'react';
 import GroupHeader from './GroupHeader';
 import GroupAssetList from './GroupAssetList';
@@ -13,7 +14,8 @@ export default function AssetGroupList({
   activeTab,
   lastAddedGroupName,
   lastAddedAssetId,
-  lastRenamedGroupName
+  lastRenamedGroupName,
+  allExpanded = true // 🔹 Nuevo prop
 }) {
   const { setCategoryGroups } = useCategoryGroups();
 
@@ -49,6 +51,15 @@ export default function AssetGroupList({
       return () => clearTimeout(timer);
     }
   }, [lastAddedAssetId]);
+
+  // 🔹 Sincroniza allExpanded
+  useEffect(() => {
+    const newState = {};
+    for (const name of Object.keys(groups)) {
+      newState[name] = allExpanded;
+    }
+    setExpandedGroups(newState);
+  }, [allExpanded, groups]);
 
   const toggleGroup = (groupName) => {
     setExpandedGroups(prev => ({

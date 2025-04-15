@@ -1,3 +1,4 @@
+// 📁 frontend/features/portfolio/Portfolio.jsx
 import React, { useState, useEffect } from 'react';
 import AssetsSummary from '../assets/AssetsSummary';
 import GroupManager from '../assets/GroupManager';
@@ -14,6 +15,7 @@ export default function Portfolio({ initialData, exchangeRates }) {
   const [lastAddedGroupName, setLastAddedGroupName] = useState(null);
   const [lastRenamedGroupName, setLastRenamedGroupName] = useState(null);
   const [lastAddedAssetId, setLastAddedAssetId] = useState(null);
+  const [allExpanded, setAllExpanded] = useState(true); // 🔹 Nuevo estado
 
   const { categoryGroups, setCategoryGroups } = useCategoryGroups();
   const normalizedGroups = categoryGroups[activeTab] || {};
@@ -124,11 +126,7 @@ export default function Portfolio({ initialData, exchangeRates }) {
       group.forEach(asset => {
         const { initialQty = 0, actualCost, id } = asset;
         const marketPrice =
-          actualCost ??
-          marketData?.cryptos?.[id]?.eur ??
-          marketData?.stocks?.[id]?.eur ??
-          0;
-
+          actualCost ?? marketData?.cryptos?.[id]?.eur ?? marketData?.stocks?.[id]?.eur ?? 0;
         total += initialQty * marketPrice;
       });
     });
@@ -188,6 +186,16 @@ export default function Portfolio({ initialData, exchangeRates }) {
         setLastAddedAssetId={setLastAddedAssetId}
       />
 
+      {/* 🔹 Botón toggle para todos los grupos */}
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={() => setAllExpanded(prev => !prev)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-800 underline"
+        >
+          {allExpanded ? 'Colapsar todos los grupos' : 'Expandir todos los grupos'}
+        </button>
+      </div>
+
       <AssetGroupList
         groups={normalizedGroups}
         marketData={marketData}
@@ -199,6 +207,7 @@ export default function Portfolio({ initialData, exchangeRates }) {
         lastAddedGroupName={lastAddedGroupName}
         lastAddedAssetId={lastAddedAssetId}
         lastRenamedGroupName={lastRenamedGroupName}
+        allExpanded={allExpanded} // 🔹 nueva prop
       />
     </div>
   );
