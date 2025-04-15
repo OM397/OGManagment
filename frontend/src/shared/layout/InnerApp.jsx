@@ -29,6 +29,11 @@ export default function InnerApp({ user, onLogout }) {
     }
   });
 
+  const handleSetSelected = (name) => {
+    setSelected(name);
+    if (window.innerWidth < 768) setShowSidebar(false);
+  };
+
   if (!categoryGroups) {
     return <div className="p-6 text-center">Cargando datos del usuario...</div>;
   }
@@ -37,7 +42,7 @@ export default function InnerApp({ user, onLogout }) {
     <div className="min-h-screen flex flex-col md:flex-row">
       {(showSidebar || window.innerWidth >= 768) && (
         <div className="md:block">
-          <Sidebar selected={selected} setSelected={setSelected} totalValue={totalValue} />
+          <Sidebar selected={selected} setSelected={handleSetSelected} totalValue={totalValue} />
         </div>
       )}
 
