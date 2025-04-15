@@ -1,4 +1,4 @@
-// 📁 /backend/server.js
+// 📁 backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,12 +7,13 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const tickersRoutes = require('./backend/routes/tickersRoutes');
-const authRoutes = require('./backend/routes/authRoutes');
-const adminRoutes = require('./backend/routes/adminRoutes');
-const userRoutes = require('./backend/routes/userRoutes');
-const authMiddleware = require('./backend/middleware/authMiddleware');
+const { requireRoute, requireMiddleware } = require('./alias-require');
 
+const tickersRoutes = requireRoute('tickersRoutes');
+const authRoutes = requireRoute('authRoutes');
+const adminRoutes = requireRoute('adminRoutes');
+const userRoutes = requireRoute('userRoutes');
+const authMiddleware = requireMiddleware('authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,11 +33,10 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'https://ogmanagment-production-f730.up.railway.app'
-  ];
-  
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://ogmanagment-production-f730.up.railway.app'
+];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -60,16 +60,13 @@ const authLimiter = rateLimit({
 
 // ✅ Rutas principales
 app.use('/api', tickersRoutes);
-app.use('/api', authRoutes);   // login, register, logout
-
-// ✅ Rutas protegidas
-app.use('/api', userRoutes);   // user, user-data, change-password
-app.use('/api', adminRoutes);  // admin-only, admin/users
+app.use('/api', authRoutes);
+app.use('/api', userRoutes);
+app.use('/api', adminRoutes);
 
 // ✅ SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
-
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 console.log("Serving frontend from:", path.join(__dirname, 'public', 'index.html'));
