@@ -32,11 +32,11 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://amusing-intuition-production.up.railway.app',
-  'https://ogmanagment-production.up.railway.app'
-];
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://ogmanagment-production-f730.up.railway.app'
+  ];
+  
 
 app.use(cors({
   origin: (origin, callback) => {
