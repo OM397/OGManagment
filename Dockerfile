@@ -24,5 +24,7 @@
     RUN ls -la /app/public
     
     EXPOSE 3000
+    RUN find /app/public -type f
+
     CMD ["node", "server.js"]
     

@@ -69,8 +69,10 @@ app.use('/api', adminRoutes);  // admin-only, admin/users
 // ✅ SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
+
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+console.log("Serving frontend from:", path.join(__dirname, 'public', 'index.html'));
 
 app.listen(PORT, () => {
   console.log(`✅ Backend server running at http://localhost:${PORT}`);
