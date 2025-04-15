@@ -7,12 +7,12 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const tickersRoutes = require('./backend/routes/tickersRoutes');
-const authRoutes = require('./backend/routes/authRoutes');
-const adminRoutes = require('./backend/routes/adminRoutes');
-const userRoutes = require('./backend/routes/userRoutes');
-const authMiddleware = require('./backend/middleware/authMiddleware');
-
+// ✅ Rutas corregidas para entorno local y producción
+const tickersRoutes = require('./routes/tickersRoutes');
+const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const userRoutes = require('./routes/userRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,11 +32,10 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'https://ogmanagment-production-f730.up.railway.app'
-  ];
-  
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://ogmanagment-production-f730.up.railway.app'
+];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -69,7 +68,6 @@ app.use('/api', adminRoutes);  // admin-only, admin/users
 // ✅ SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
-
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 console.log("Serving frontend from:", path.join(__dirname, 'public', 'index.html'));
