@@ -23,3 +23,4 @@
     EXPOSE 3000
     CMD ["node", "server.js"]
     
+    RUN ls -la /app/public
