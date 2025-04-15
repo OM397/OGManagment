@@ -57,12 +57,10 @@ const authLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta más tarde.' }
 });
 
-const isDev = process.env.NODE_ENV !== 'production';
-
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: !isDev,
-  sameSite: isDev ? 'Lax' : 'None',
+  secure: true,              // ✅ SIEMPRE seguro en producción
+  sameSite: 'None',          // ✅ Para permitir cookies cross-origin
   maxAge: 60 * 60 * 1000
 };
 
@@ -78,7 +76,6 @@ function authMiddleware(req, res, next) {
     res.status(403).json({ error: 'Token inválido.' });
   }
 }
-
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -103,9 +100,6 @@ app.post('/api/register', authLimiter, async (req, res) => {
 
     const token = jwt.sign({ username: email, role }, JWT_SECRET, { expiresIn: '1h' });
 
-    console.log("✅ Registro exitoso para:", email, "→ Token generado:", token);
-
-
     res
       .cookie('token', token, COOKIE_OPTIONS)
       .status(201)
@@ -113,14 +107,13 @@ app.post('/api/register', authLimiter, async (req, res) => {
         success: true,
         username: email,
         role,
-        token // 👈 🔥 AÑADIDO: se devuelve también el token
+        token
       });
 
   } catch (err) {
     res.status(500).json({ error: 'Error al registrar el usuario.' });
   }
 });
-
 
 app.post('/api/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
@@ -146,7 +139,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
         success: true,
         username,
         role: user.role,
-        token // 👈 🔥 AÑADIDO: el token ahora se devuelve explícitamente
+        token
       });
 
   } catch (err) {
@@ -154,12 +147,11 @@ app.post('/api/login', authLimiter, async (req, res) => {
   }
 });
 
-
 app.post('/api/logout', (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
-    secure: !isDev,
-    sameSite: isDev ? 'Lax' : 'Strict'
+    secure: true,
+    sameSite: 'None'
   });
   res.status(200).json({ success: true });
 });
@@ -282,7 +274,6 @@ app.post('/api/change-password', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Error actualizando la contraseña.' });
   }
 });
-
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
