@@ -2,11 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCw, UserCircle, ChevronDown } from 'lucide-react';
 import { API_BASE } from './config';
-
+import ChangePasswordModal from './ChangePasswordModal';
 
 export default function Topbar({ currency = 'EUR €', onReload = () => {}, user, onLogout }) {
   const dropdownRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [username, setUsername] = useState(user || sessionStorage.getItem('username') || '');
 
   useEffect(() => {
@@ -55,7 +56,13 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
           </button>
 
           {open && (
-            <div className="absolute right-0 mt-2 w-36 bg-white border rounded shadow-md z-10">
+            <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow-md z-10">
+              <button
+                onClick={() => { setShowModal(true); setOpen(false); }}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Modificar contraseña
+              </button>
               <button
                 onClick={onLogout}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -66,6 +73,8 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
           )}
         </div>
       </div>
+
+      {showModal && <ChangePasswordModal onClose={() => setShowModal(false)} />}
     </header>
   );
 }

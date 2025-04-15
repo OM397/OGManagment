@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  approved: {
+    type: Boolean,
+    default: false
+  },
   lastLogin: {
     type: Date,
     default: null

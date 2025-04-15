@@ -70,20 +70,38 @@ function App() {
   };
 
   const fetchUserData = async () => {
+    const token = sessionStorage.getItem('token');
+
+    if (!token) {
+    console.warn("⚠️ Token no encontrado en sessionStorage.");
+    setAuthChecked(true); // ✅ IMPORTANTE: desbloquea la pantalla
+    return;
+}
+
+
+  
     try {
-      const userInfo = await fetch(`${API_BASE}/user`, { credentials: 'include' });
+      const userInfo = await fetch(`${API_BASE}/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!userInfo.ok) throw new Error('Fallo al obtener usuario');
       const { username, role } = await userInfo.json();
       setUser(username);
       setRole(role);
       sessionStorage.setItem('username', username);
       sessionStorage.setItem('role', role);
-
-      const userData = await fetch(`${API_BASE}/user-data`, { credentials: 'include' });
+  
+      const userData = await fetch(`${API_BASE}/user-data`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!userData.ok) throw new Error('Fallo al obtener datos');
       const result = await userData.json();
       setInitialData(result?.data || {});
-    } catch (_) {
+    } catch (err) {
       setUser('');
       setRole('');
       setInitialData(null);
@@ -91,6 +109,7 @@ function App() {
       setAuthChecked(true);
     }
   };
+  
 
   useEffect(() => {
     fetchUserData();

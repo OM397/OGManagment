@@ -31,11 +31,12 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
-// ✅ Nuevo bloque CORS
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://amusing-intuition-production.up.railway.app'
+  'https://amusing-intuition-production.up.railway.app',
+  'https://ogmanagment-production.up.railway.app'
 ];
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -56,8 +57,17 @@ const authLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta más tarde.' }
 });
 
+const isDev = process.env.NODE_ENV !== 'production';
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: !isDev,
+  sameSite: isDev ? 'Lax' : 'None',
+  maxAge: 60 * 60 * 1000
+};
+
 function authMiddleware(req, res, next) {
-  const token = req.cookies.token;
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
 
   try {
@@ -69,40 +79,48 @@ function authMiddleware(req, res, next) {
   }
 }
 
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 app.use('/api', tickersRoutes);
 
-const isDev = process.env.NODE_ENV !== 'production';
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: !isDev,
-  sameSite: isDev ? 'Lax' : 'Strict',
-  maxAge: 60 * 60 * 1000
-};
-
 app.post('/api/register', authLimiter, async (req, res) => {
-  const { username, password, role = 'user' } = req.body;
+  const { email, password, role = 'user' } = req.body;
 
-  if (!username || !password || username.length < 3 || password.length < 5) {
-    return res.status(400).json({ error: 'Credenciales inválidas.' });
+  if (!email || !password || password.length < 5 || !isValidEmail(email)) {
+    return res.status(400).json({ error: 'Email inválido o contraseña muy corta.' });
   }
 
   try {
-    const existing = await User.findOne({ username });
+    const existing = await User.findOne({ username: email });
     if (existing) return res.status(409).json({ error: 'Usuario ya existe.' });
 
     const hash = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hash, role });
+    const newUser = new User({ username: email, password: hash, role });
     await newUser.save();
 
-    const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username: email, role }, JWT_SECRET, { expiresIn: '1h' });
 
-    res.cookie('token', token, COOKIE_OPTIONS)
-       .status(201)
-       .json({ success: true, username, role });
+    console.log("✅ Registro exitoso para:", email, "→ Token generado:", token);
+
+
+    res
+      .cookie('token', token, COOKIE_OPTIONS)
+      .status(201)
+      .json({
+        success: true,
+        username: email,
+        role,
+        token // 👈 🔥 AÑADIDO: se devuelve también el token
+      });
+
   } catch (err) {
     res.status(500).json({ error: 'Error al registrar el usuario.' });
   }
 });
+
 
 app.post('/api/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
@@ -114,18 +132,28 @@ app.post('/api/login', authLimiter, async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
 
+    if (!user.approved) return res.status(403).json({ error: 'Tu cuenta aún no ha sido aprobada por el administrador.' });
+
     user.lastLogin = new Date();
     await user.save();
 
     const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
-    res.cookie('token', token, COOKIE_OPTIONS)
-       .status(200)
-       .json({ success: true, username, role: user.role });
+    res
+      .cookie('token', token, COOKIE_OPTIONS)
+      .status(200)
+      .json({
+        success: true,
+        username,
+        role: user.role,
+        token // 👈 🔥 AÑADIDO: el token ahora se devuelve explícitamente
+      });
+
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
+
 
 app.post('/api/logout', (req, res) => {
   res.clearCookie('token', {
@@ -136,15 +164,34 @@ app.post('/api/logout', (req, res) => {
   res.status(200).json({ success: true });
 });
 
-app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, res) => {
+app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
+  res.json({ message: `👑 Bienvenido admin ${req.user.username}`, username: req.user.username });
+});
+
+app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
+  try {
+    const users = await User.find({}, { username: 1, role: 1, approved: 1, createdAt: 1, lastLogin: 1 }).lean().sort({ createdAt: -1 });
+    res.status(200).json({ users });
+  } catch (err) {
+    res.status(500).json({ error: 'No se pudieron cargar los usuarios.' });
+  }
+});
+
+app.patch('/api/admin/users/:username/approve', authMiddleware, isAdmin, async (req, res) => {
   const { username } = req.params;
-  if (username === 'admin') return res.status(403).json({ error: 'No se puede eliminar el usuario admin.' });
+  if (username === 'admin') return res.status(403).json({ error: 'No se puede modificar el admin.' });
 
   try {
-    await User.deleteOne({ username });
-    res.status(200).json({ success: true });
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (user.approved) return res.status(400).json({ error: 'Este usuario ya fue aprobado.' });
+
+    user.approved = true;
+    await user.save();
+
+    res.status(200).json({ success: true, approved: true });
   } catch (err) {
-    res.status(500).json({ error: 'Error eliminando usuario.' });
+    res.status(500).json({ error: 'Error al aprobar usuario.' });
   }
 });
 
@@ -162,6 +209,18 @@ app.patch('/api/admin/users/:username/role', authMiddleware, isAdmin, async (req
     res.status(200).json({ success: true, role: newRole });
   } catch (err) {
     res.status(500).json({ error: 'Error actualizando rol.' });
+  }
+});
+
+app.delete('/api/admin/users/:username', authMiddleware, isAdmin, async (req, res) => {
+  const { username } = req.params;
+  if (username === 'admin') return res.status(403).json({ error: 'No se puede eliminar el usuario admin.' });
+
+  try {
+    await User.deleteOne({ username });
+    res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error eliminando usuario.' });
   }
 });
 
@@ -193,19 +252,6 @@ app.post('/api/user-data', authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
-  res.json({ message: `👑 Bienvenido admin ${req.user.username}`, username: req.user.username });
-});
-
-app.get('/api/admin/users', authMiddleware, isAdmin, async (req, res) => {
-  try {
-    const users = await User.find({}, { username: 1, role: 1, createdAt: 1, lastLogin: 1 }).lean().sort({ createdAt: -1 });
-    res.status(200).json({ users });
-  } catch (err) {
-    res.status(500).json({ error: 'No se pudieron cargar los usuarios.' });
-  }
-});
-
 app.get('/api/user', authMiddleware, (req, res) => {
   const { username, role } = req.user || {};
   if (!username || !role) {
@@ -213,6 +259,30 @@ app.get('/api/user', authMiddleware, (req, res) => {
   }
   res.status(200).json({ username, role });
 });
+
+app.post('/api/change-password', authMiddleware, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword || newPassword.length < 5) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 5 caracteres.' });
+  }
+
+  try {
+    const user = await User.findOne({ username: req.user.username });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) return res.status(401).json({ error: 'Contraseña actual incorrecta.' });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Contraseña actualizada correctamente.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error actualizando la contraseña.' });
+  }
+});
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {

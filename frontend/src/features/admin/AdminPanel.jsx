@@ -1,4 +1,3 @@
-// 📁 frontend/src/features/admin/AdminPanel.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Login from '../auth/Login';
@@ -21,6 +20,17 @@ export default function AdminPanel() {
       setUsers(data.users || []);
     } catch (err) {
       setError('Error cargando usuarios.');
+    }
+  };
+
+  const handleApprove = async (username) => {
+    try {
+      await axios.patch(`${API_BASE}/admin/users/${username}/approve`, {}, {
+        withCredentials: true
+      });
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al aprobar usuario.');
     }
   };
 
@@ -104,23 +114,39 @@ export default function AdminPanel() {
           <tr>
             <th className="p-2 border">Usuario</th>
             <th className="p-2 border">Rol</th>
+            <th className="p-2 border">Estado</th>
             <th className="p-2 border">Creado</th>
-            <th className="p-2 border">Ultimo Login</th>
+            <th className="p-2 border">Último Login</th>
             <th className="p-2 border">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {users.length === 0 ? (
-            <tr><td colSpan="5" className="p-4 text-center">No hay usuarios disponibles.</td></tr>
+            <tr><td colSpan="6" className="p-4 text-center">No hay usuarios disponibles.</td></tr>
           ) : users.map((u) => (
             <tr key={u._id}>
               <td className="p-2 border">{u.username}</td>
               <td className="p-2 border">{u.role}</td>
+              <td className="p-2 border">
+                {u.approved ? (
+                  <span className="text-green-600">Aprobado</span>
+                ) : (
+                  <span className="text-yellow-600">Pendiente</span>
+                )}
+              </td>
               <td className="p-2 border">{new Date(u.createdAt).toLocaleString()}</td>
               <td className="p-2 border">{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '—'}</td>
               <td className="p-2 border space-x-2">
                 {u.username !== 'admin' && (
                   <>
+                    {!u.approved && (
+                      <button
+                        onClick={() => handleApprove(u.username)}
+                        className="text-xs bg-blue-100 text-blue-800 border border-blue-300 rounded px-2 py-1 hover:bg-blue-200"
+                      >
+                        Aprobar
+                      </button>
+                    )}
                     <button
                       onClick={() => handleRoleToggle(u.username)}
                       className="text-xs bg-yellow-100 text-yellow-800 border border-yellow-300 rounded px-2 py-1 hover:bg-yellow-200"
