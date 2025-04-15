@@ -2,9 +2,8 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
-
 const User = require('../models/User');
+const rateLimiter = require('../middleware/rateLimiter');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -16,18 +15,9 @@ const COOKIE_OPTIONS = {
   maxAge: 60 * 60 * 1000
 };
 
-// ✅ SOLO para login y register
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { error: 'Demasiados intentos. Intenta más tarde.' }
-});
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-router.post('/register', authLimiter, async (req, res) => {
+router.post('/register', rateLimiter, async (req, res) => {
   const { email, password, role = 'user' } = req.body;
 
   if (!email || !password || password.length < 5 || !isValidEmail(email)) {
@@ -55,7 +45,7 @@ router.post('/register', authLimiter, async (req, res) => {
   }
 });
 
-router.post('/login', authLimiter, async (req, res) => {
+router.post('/login', rateLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   try {
