@@ -34,7 +34,7 @@ export default function GroupManager({
 
   return (
     <>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
         <GroupNameInput onAddGroup={onAddGroup} />
         <ToggleInvestmentButton
           showAddInvestment={showAddInvestment}
