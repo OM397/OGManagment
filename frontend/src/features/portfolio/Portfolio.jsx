@@ -126,7 +126,8 @@ export default function Portfolio({ initialData, exchangeRates }) {
         const marketPrice =
           actualCost ??
           marketData?.cryptos?.[id]?.eur ??
-          marketData?.stocks?.[id]?.eur ?? 0;
+          marketData?.stocks?.[id]?.eur ??
+          0;
 
         total += initialQty * marketPrice;
       });
@@ -144,29 +145,31 @@ export default function Portfolio({ initialData, exchangeRates }) {
         exchangeRates={exchangeRates}
       />
 
-      <div className="flex flex-wrap gap-4 mb-6 border-b border-gray-200 text-sm font-medium">
-        {CATEGORIES.map(cat => {
-          const isActive = activeTab === cat;
-          const total = getCategoryTotal(cat);
-          const totalDisplay = total > 0 ? formatter.format(total) : '€€€€';
+      <div className="overflow-x-auto mb-6">
+        <div className="flex gap-4 border-b border-gray-200 text-sm font-medium min-w-[500px]">
+          {CATEGORIES.map(cat => {
+            const isActive = activeTab === cat;
+            const total = getCategoryTotal(cat);
+            const totalDisplay = total > 0 ? formatter.format(total) : '€€€€';
 
-          return (
-            <button
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              className={`pb-2 flex-1 min-w-[100px] sm:min-w-[150px] transition-colors duration-200 flex flex-col items-center text-center ${
-                isActive
-                  ? 'text-black border-b-2 border-black font-semibold'
-                  : 'text-gray-400 hover:text-black'
-              }`}
-            >
-              <span>{cat}</span>
-              <span className={`text-xs ${isActive ? 'text-black' : 'text-gray-400'}`}>
-                {totalDisplay}
-              </span>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveTab(cat)}
+                className={`pb-2 min-w-[100px] sm:min-w-[150px] flex-1 transition-colors duration-200 flex flex-col items-center text-center ${
+                  isActive
+                    ? 'text-black border-b-2 border-black font-semibold'
+                    : 'text-gray-400 hover:text-black'
+                }`}
+              >
+                <span>{cat}</span>
+                <span className={`text-xs ${isActive ? 'text-black' : 'text-gray-400'}`}>
+                  {totalDisplay}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {marketDataError && (

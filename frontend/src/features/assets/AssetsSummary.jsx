@@ -12,9 +12,11 @@ export default function AssetsSummary({ initialData, marketData }) {
           const { initialQty = 0, initialCost = 0, id, actualCost } = asset;
 
           const initialValue = initialQty * initialCost;
-          const actualPrice = actualCost ??
+          const actualPrice =
+            actualCost ??
             marketData?.cryptos?.[id]?.eur ??
-            marketData?.stocks?.[id]?.eur ?? 0;
+            marketData?.stocks?.[id]?.eur ??
+            0;
 
           const actualValue = initialQty * actualPrice;
 
@@ -32,14 +34,14 @@ export default function AssetsSummary({ initialData, marketData }) {
     isPositive ? 'text-green-600' : changePct < 0 ? 'text-red-600' : 'text-gray-500';
 
   return (
-    <div className="mb-8 p-4 sm:p-6 bg-white dark:bg-muted rounded-2xl shadow-sm">
-      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 flex-wrap sm:gap-6">
+    <div className="w-full mb-6 p-4 sm:p-6 bg-white rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6 flex-wrap">
         {/* Net Worth */}
-        <div className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-none">
+        <div className="text-3xl sm:text-4xl font-bold text-gray-900 leading-none">
           {formatter.format(totalActual)}
         </div>
 
-        {/* ABS and % Variations */}
+        {/* ABS and % */}
         <div className="grid grid-cols-2 gap-4 text-center sm:text-left">
           <div>
             <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-1">
