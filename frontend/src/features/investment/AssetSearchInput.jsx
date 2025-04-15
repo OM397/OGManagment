@@ -10,9 +10,9 @@ export default function AssetSearchInput({
   onSelect
 }) {
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
       <select
-        className="border px-2 py-1 rounded bg-white text-gray-800"
+        className="border px-2 py-2 rounded bg-white text-gray-800 w-full sm:w-auto"
         value={assetType}
         onChange={e => setAssetType(e.target.value)}
       >
@@ -20,7 +20,7 @@ export default function AssetSearchInput({
         <option value="Stocks">Stocks</option>
       </select>
 
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <Select
           placeholder="Search asset..."
           onInputChange={handleInputChange}
@@ -29,6 +29,10 @@ export default function AssetSearchInput({
           onChange={onSelect}
           isSearchable
           menuIsOpen={inputValue.length >= 2}
+          styles={{
+            container: base => ({ ...base, width: '100%' }),
+            control: base => ({ ...base, minHeight: '42px' })
+          }}
         />
       </div>
     </div>

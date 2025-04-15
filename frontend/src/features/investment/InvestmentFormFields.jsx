@@ -3,9 +3,9 @@ import React from 'react';
 export default function InvestmentFormFields({ activeTab, formData, setFormData, categoryGroups }) {
   return (
     <>
-      <div className="flex flex-wrap gap-2 mb-2">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-3">
         <input
-          className="border px-2 py-1 rounded w-36"
+          className="border px-2 py-2 rounded w-full sm:w-36 flex-grow min-w-0"
           placeholder="Quantity"
           type="number"
           min="0.01"
@@ -15,7 +15,7 @@ export default function InvestmentFormFields({ activeTab, formData, setFormData,
         />
 
         <input
-          className="border px-2 py-1 rounded w-44"
+          className="border px-2 py-2 rounded w-full sm:w-44 flex-grow min-w-0"
           placeholder="Purchase Price (€)"
           type="number"
           min="0.01"
@@ -26,7 +26,7 @@ export default function InvestmentFormFields({ activeTab, formData, setFormData,
 
         {activeTab !== 'Investments' && (
           <input
-            className="border px-2 py-1 rounded w-44"
+            className="border px-2 py-2 rounded w-full sm:w-44 flex-grow min-w-0"
             placeholder="Actual Value (€)"
             type="number"
             min="0.01"
@@ -38,7 +38,7 @@ export default function InvestmentFormFields({ activeTab, formData, setFormData,
       </div>
 
       <select
-        className="border px-2 py-1 rounded mb-3 w-full"
+        className="border px-2 py-2 rounded w-full mb-4"
         value={formData.group}
         onChange={e => setFormData({ ...formData, group: e.target.value })}
       >
