@@ -33,9 +33,11 @@ export default function InnerApp({ user, onLogout }) {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar selected={selected} setSelected={setSelected} totalValue={totalValue} />
-      <main className="flex-1 p-6 bg-white">
+    <div className="min-h-screen flex flex-col md:flex-row">
+      <div className="md:block hidden">
+        <Sidebar selected={selected} setSelected={setSelected} totalValue={totalValue} />
+      </div>
+      <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <Topbar user={user} onLogout={onLogout} />
           {selected === 'Assets' && (
