@@ -7,11 +7,12 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const tickersRoutes = require('./routes/tickersRoutes');
-const authRoutes = require('./routes/authRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const userRoutes = require('./routes/userRoutes');
-const authMiddleware = require('./middleware/authMiddleware');
+const tickersRoutes = require('./backend/routes/tickersRoutes');
+const authRoutes = require('./backend/routes/authRoutes');
+const adminRoutes = require('./backend/routes/adminRoutes');
+const userRoutes = require('./backend/routes/userRoutes');
+const authMiddleware = require('./backend/middleware/authMiddleware');
+
 
 const app = express();
 const PORT = process.env.PORT || 3001;
