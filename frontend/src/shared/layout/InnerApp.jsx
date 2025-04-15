@@ -49,7 +49,7 @@ export default function InnerApp({ user, onLogout }) {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {(showSidebar || !isMobile) && (
-        <div className="md:block">
+        <div className="md:block w-full md:w-auto">
           <Sidebar selected={selected} setSelected={handleSetSelected} totalValue={totalValue} />
         </div>
       )}
