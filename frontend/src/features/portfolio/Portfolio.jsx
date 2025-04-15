@@ -186,15 +186,25 @@ export default function Portfolio({ initialData, exchangeRates }) {
         setLastAddedAssetId={setLastAddedAssetId}
       />
 
-      {/* 🔹 Botón toggle para todos los grupos */}
-      <div className="flex justify-end mb-3">
-        <button
-          onClick={() => setAllExpanded(prev => !prev)}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 underline"
-        >
-          {allExpanded ? 'Colapsar todos los grupos' : 'Expandir todos los grupos'}
-        </button>
-      </div>
+    {/* 🔹 Botón toggle para todos los grupos */}
+<div className="flex justify-end mb-3">
+  <button
+    onClick={() => setAllExpanded(prev => !prev)}
+    className="flex items-center gap-1 text-sm text-gray-600 hover:text-black transition"
+    title={allExpanded ? 'Colapsar todos los grupos' : 'Expandir todos los grupos'}
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={`h-5 w-5 transition-transform duration-200 ${allExpanded ? 'rotate-180' : ''}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+</div>
+
 
       <AssetGroupList
         groups={normalizedGroups}
