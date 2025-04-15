@@ -19,5 +19,5 @@ Thumbs.db
 # Ignorar archivos sensibles
 .env
 node_modules/
-dist/
+
 

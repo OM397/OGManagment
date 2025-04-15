@@ -138,13 +138,18 @@ function App() {
         }
       />
       <Route
-        path="/admin"
-        element={
-          <RequireAdmin user={user} role={role}>
-            <AdminPanel onLogout={logout} />
-          </RequireAdmin>
-        }
-      />
+  path="/admin"
+  element={
+    !user ? (
+      <LoginWithRedirect onLogin={handleLogin} />
+    ) : role === 'admin' ? (
+      <AdminPanel onLogout={logout} />
+    ) : (
+      <Navigate to="/" replace />
+    )
+  }
+/>
+
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
