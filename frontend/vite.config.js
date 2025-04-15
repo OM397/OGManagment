@@ -21,9 +21,9 @@ export default defineConfig({
       },
     },
   },
-  define: {
-    'import.meta.env.API_BASE': JSON.stringify('https://ogmanagment-production.up.railway.app/api')
-  },
+  
+
+  
   build: {
     outDir: 'dist',
     rollupOptions: {
