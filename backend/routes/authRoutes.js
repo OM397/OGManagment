@@ -1,24 +1,33 @@
 // 📁 backend/routes/authRoutes.js
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+
 const User = require('../models/User');
 
+const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+  secure: true,
+  sameSite: 'None',
   maxAge: 60 * 60 * 1000
 };
+
+// ✅ SOLO para login y register
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Demasiados intentos. Intenta más tarde.' }
+});
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   const { email, password, role = 'user' } = req.body;
 
   if (!email || !password || password.length < 5 || !isValidEmail(email)) {
@@ -35,16 +44,18 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign({ username: email, role }, JWT_SECRET, { expiresIn: '1h' });
 
-    res
-      .cookie('token', token, COOKIE_OPTIONS)
-      .status(201)
-      .json({ success: true, username: email, role, token });
+    res.cookie('token', token, COOKIE_OPTIONS).status(201).json({
+      success: true,
+      username: email,
+      role,
+      token
+    });
   } catch (err) {
     res.status(500).json({ error: 'Error al registrar el usuario.' });
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -53,28 +64,26 @@ router.post('/login', async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
-    if (!user.approved) return res.status(403).json({ error: 'Tu cuenta aún no ha sido aprobada.' });
+    if (!user.approved) return res.status(403).json({ error: 'Tu cuenta aún no ha sido aprobada por el administrador.' });
 
     user.lastLogin = new Date();
     await user.save();
 
     const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
-    res
-      .cookie('token', token, COOKIE_OPTIONS)
-      .status(200)
-      .json({ success: true, username, role: user.role, token });
+    res.cookie('token', token, COOKIE_OPTIONS).status(200).json({
+      success: true,
+      username,
+      role: user.role,
+      token
+    });
   } catch (err) {
     res.status(500).json({ error: 'Error del servidor.' });
   }
 });
 
-router.post('/logout', (_, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
-  });
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', COOKIE_OPTIONS);
   res.status(200).json({ success: true });
 });
 

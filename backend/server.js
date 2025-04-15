@@ -71,7 +71,8 @@ function authMiddleware(req, res, next) {
 
 // ✅ Rutas principales
 app.use('/api', tickersRoutes);
-app.use('/api', authLimiter, authRoutes); // ✅ Rutas extraídas
+app.use('/api', authRoutes);  // ✅ sin rate limiter global
+
 
 // ✅ Rutas de administración
 app.get('/api/admin-only', authMiddleware, isAdmin, (req, res) => {
