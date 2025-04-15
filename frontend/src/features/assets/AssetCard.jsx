@@ -1,3 +1,4 @@
+// 📁 frontend/src/features/assets/AssetCard.jsx
 import React, { useState, useEffect } from 'react';
 import { formatter } from '../../shared/utils';
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
@@ -92,12 +93,12 @@ export default function AssetCard({
       }`}
     >
       <div
-        className="flex justify-between items-center cursor-pointer relative overflow-visible"
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer gap-2"
         onClick={() => setIsOpen(prev => !prev)}
       >
-        <div className="flex items-center gap-1 font-medium capitalize text-sm">{name}</div>
+        <div className="font-medium capitalize text-sm">{name}</div>
 
-        <div className="flex items-center justify-end gap-4 ml-auto text-right">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-3 ml-auto text-right">
           <div className="text-sm font-semibold">{formatter.format(actualValue)}</div>
           <div
             className={`px-2 py-0.5 border text-xs font-medium ${
@@ -149,7 +150,7 @@ export default function AssetCard({
       </div>
 
       {isOpen && (
-        <div className="mt-3 grid grid-cols-3 gap-y-2 text-sm text-gray-600">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-sm text-gray-600">
           <div>
             <div className="text-gray-400">Initial Cost</div>
             {editMode ? (
@@ -161,7 +162,6 @@ export default function AssetCard({
               />
             ) : (
               <div>{formatter.format(initialCost.toFixed(2))}</div>
-
             )}
           </div>
           <div>
@@ -185,8 +185,7 @@ export default function AssetCard({
           <div>
             <div className="text-gray-400">Actual Cost</div>
             <div className="group relative w-fit">
-            <span>{formatter.format(actualPrice.toFixed(2))}</span>
-
+              <span>{formatter.format(actualPrice.toFixed(2))}</span>
               {type === 'stock' && wasConverted && (
                 <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow z-10">
                   Convertido desde {stockCurrency}
@@ -205,7 +204,7 @@ export default function AssetCard({
           </div>
 
           {editMode && (
-            <div className="col-span-3 flex justify-end gap-2 mt-2">
+            <div className="col-span-full flex justify-end gap-2 mt-2">
               <button
                 onClick={() => setEditMode(false)}
                 className="px-4 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
