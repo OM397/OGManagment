@@ -1,13 +1,13 @@
 # Dockerfile
 
 # --- Build frontend ---
-    FROM node:18-alpine AS frontend-builder
+    FROM node:20-alpine AS frontend-builder
     WORKDIR /frontend
     COPY frontend/ ./
     RUN npm install && npm run build
     
     # --- Backend ---
-    FROM node:18-alpine AS backend
+        FROM node:20-alpine AS backend
     WORKDIR /app
     
     COPY package*.json ./
