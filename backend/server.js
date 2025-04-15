@@ -7,16 +7,6 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const isRailway = process.env.RAILWAY_ENV === 'production' || process.env.NODE_ENV === 'production';
-const routesBase = isRailway ? './routes' : './backend/routes';
-const middlewareBase = isRailway ? './middleware' : './backend/middleware';
-
-const tickersRoutes = require(`${routesBase}/tickersRoutes`);
-const authRoutes = require(`${routesBase}/authRoutes`);
-const adminRoutes = require(`${routesBase}/adminRoutes`);
-const userRoutes = require(`${routesBase}/userRoutes`);
-const authMiddleware = require(`${middlewareBase}/authMiddleware`);
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -25,6 +15,17 @@ const MONGODB_URI = process.env.MONGODB_URI;
 if (!JWT_SECRET || !MONGODB_URI) {
   throw new Error("❌ Faltan JWT_SECRET o MONGODB_URI en .env");
 }
+
+// 📌 Ruta base dinámica (local vs producción)
+const baseDir = __dirname.includes('backend') ? './routes' : './backend/routes';
+const middlewareBase = __dirname.includes('backend') ? './middleware' : './backend/middleware';
+
+// ✅ Importa rutas y middleware usando rutas correctas en cada entorno
+const tickersRoutes = require(path.join(__dirname, baseDir, 'tickersRoutes.js'));
+const authRoutes = require(path.join(__dirname, baseDir, 'authRoutes.js'));
+const adminRoutes = require(path.join(__dirname, baseDir, 'adminRoutes.js'));
+const userRoutes = require(path.join(__dirname, baseDir, 'userRoutes.js'));
+const authMiddleware = require(path.join(__dirname, middlewareBase, 'authMiddleware.js'));
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
@@ -62,11 +63,9 @@ const authLimiter = rateLimit({
 
 // ✅ Rutas principales
 app.use('/api', tickersRoutes);
-app.use('/api', authRoutes);   // login, register, logout
-
-// ✅ Rutas protegidas
-app.use('/api', userRoutes);   // user, user-data, change-password
-app.use('/api', adminRoutes);  // admin-only, admin/users
+app.use('/api', authRoutes);
+app.use('/api', userRoutes);
+app.use('/api', adminRoutes);
 
 // ✅ SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));
