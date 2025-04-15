@@ -20,7 +20,9 @@
     # ✅ Copy built frontend into public dir
     COPY --from=frontend-builder /frontend/dist ./public
     
+    # ✅ Check if frontend build files exist
+    RUN ls -la /app/public
+    
     EXPOSE 3000
     CMD ["node", "server.js"]
     
-    RUN ls -la /app/public
