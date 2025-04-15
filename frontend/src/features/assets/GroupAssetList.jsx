@@ -1,3 +1,4 @@
+// 📁 frontend/src/features/assets/GroupAssetList.jsx
 import React from 'react';
 import AssetCard from './AssetCard';
 
@@ -30,7 +31,11 @@ export default function GroupAssetList({
   };
 
   return (
-    <div onDragOver={allowDrop} onDrop={handleDrop} className="min-h-[48px] py-2">
+    <div
+      onDragOver={allowDrop}
+      onDrop={handleDrop}
+      className="min-h-[48px] py-2 space-y-4"
+    >
       {visibleAssets.length > 0 ? (
         visibleAssets.map((asset, idx) => (
           <AssetCard
@@ -46,26 +51,36 @@ export default function GroupAssetList({
           />
         ))
       ) : (
-        <div className="text-sm text-gray-400 italic px-4 py-2">Arrastra aquí para mover un asset</div>
+        <div className="text-sm text-gray-400 italic px-4 py-2 text-center">
+          Arrastra aquí para mover un asset
+        </div>
       )}
 
       {totalPages > 1 && (
-        <div className="flex gap-2 mt-2 px-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(groupName, page - 1)}
-            className={`px-2 py-1 rounded ${page === 1 ? 'bg-gray-300' : 'bg-blue-600 text-white'}`}
-          >
-            Anterior
-          </button>
-          <span className="text-sm px-2 py-1">Página {page} de {totalPages}</span>
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage(groupName, page + 1)}
-            className={`px-2 py-1 rounded ${page === totalPages ? 'bg-gray-300' : 'bg-blue-600 text-white'}`}
-          >
-            Siguiente
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 px-2 text-sm">
+          <div className="flex gap-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(groupName, page - 1)}
+              className={`px-3 py-1 rounded ${
+                page === 1 ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white'
+              }`}
+            >
+              Anterior
+            </button>
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage(groupName, page + 1)}
+              className={`px-3 py-1 rounded ${
+                page === totalPages ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white'
+              }`}
+            >
+              Siguiente
+            </button>
+          </div>
+          <div className="text-gray-600">
+            Página {page} de {totalPages}
+          </div>
         </div>
       )}
     </div>
