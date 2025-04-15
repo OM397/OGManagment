@@ -52,7 +52,7 @@ function InnerApp({ user, onLogout }) {
   );
 }
 
-function App() {
+function MainApp() {
   const [user, setUser] = useState(() => sessionStorage.getItem('username') || '');
   const [role, setRole] = useState(() => sessionStorage.getItem('role') || '');
   const [initialData, setInitialData] = useState(null);
@@ -71,20 +71,11 @@ function App() {
 
   const fetchUserData = async () => {
     const token = sessionStorage.getItem('token');
+    if (!token) return setAuthChecked(true);
 
-    if (!token) {
-    console.warn("⚠️ Token no encontrado en sessionStorage.");
-    setAuthChecked(true); // ✅ IMPORTANTE: desbloquea la pantalla
-    return;
-}
-
-
-  
     try {
       const userInfo = await fetch(`${API_BASE}/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (!userInfo.ok) throw new Error('Fallo al obtener usuario');
       const { username, role } = await userInfo.json();
@@ -92,11 +83,9 @@ function App() {
       setRole(role);
       sessionStorage.setItem('username', username);
       sessionStorage.setItem('role', role);
-  
+
       const userData = await fetch(`${API_BASE}/user-data`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (!userData.ok) throw new Error('Fallo al obtener datos');
       const result = await userData.json();
@@ -109,7 +98,6 @@ function App() {
       setAuthChecked(true);
     }
   };
-  
 
   useEffect(() => {
     fetchUserData();
@@ -138,18 +126,13 @@ function App() {
         }
       />
       <Route
-  path="/admin"
-  element={
-    !user ? (
-      <LoginWithRedirect onLogin={handleLogin} />
-    ) : role === 'admin' ? (
-      <AdminPanel onLogout={logout} />
-    ) : (
-      <Navigate to="/" replace />
-    )
-  }
-/>
-
+        path="/admin"
+        element={
+          <RequireAdmin user={user} role={role}>
+            <AdminPanel onLogout={logout} />
+          </RequireAdmin>
+        }
+      />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
@@ -158,7 +141,7 @@ function App() {
 export default function WrappedApp() {
   return (
     <Router>
-      <App />
+      <MainApp />
     </Router>
   );
 }
