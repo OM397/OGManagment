@@ -2,9 +2,11 @@
     FROM node:20-alpine AS frontend-builder
     WORKDIR /frontend
     COPY frontend/package*.json ./
+    COPY frontend/.env.production .env.production
     RUN npm install
     COPY frontend/ ./
     RUN npm run build
+    
     
     # --- Backend ---
     FROM node:20-alpine AS backend
