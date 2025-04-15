@@ -1,73 +1,175 @@
-import React from 'react';
-import AssetCard from './AssetCard';
+// 📁 frontend/src/features/assets/GroupAssetList.jsx
+import React, { useState, useEffect } from 'react';
+import GroupHeader from './GroupHeader';
+import GroupAssetList from './GroupAssetList';
+import GroupSummary from './GroupSummary';
+import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
 
-const ITEMS_PER_PAGE = 10;
-
-export default function GroupAssetList({
-  groupName,
-  assets,
-  page,
-  setPage,
+export default function AssetGroupList({
+  groups,
   marketData,
   exchangeRates,
   onDeleteAsset,
+  onDeleteGroup,
   activeTab,
+  lastAddedGroupName,
   lastAddedAssetId,
-  onDropAsset
+  lastRenamedGroupName
 }) {
-  const totalPages = Math.ceil(assets.length / ITEMS_PER_PAGE);
-  const startIdx = (page - 1) * ITEMS_PER_PAGE;
-  const visibleAssets = assets.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  const { setCategoryGroups } = useCategoryGroups();
+  const [pageByGroup, setPageByGroup] = useState({});
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [highlightedGroup, setHighlightedGroup] = useState(null);
+  const [highlightedAssetId, setHighlightedAssetId] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null);
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const assetData = JSON.parse(e.dataTransfer.getData('application/json'));
-    onDropAsset(assetData.groupName, groupName, assetData.assetIndex);
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.group-options-menu')) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (lastAddedGroupName || lastRenamedGroupName) {
+      const name = lastAddedGroupName || lastRenamedGroupName;
+      setHighlightedGroup(name);
+      const timer = setTimeout(() => setHighlightedGroup(null), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAddedGroupName, lastRenamedGroupName]);
+
+  useEffect(() => {
+    if (lastAddedAssetId) {
+      setHighlightedAssetId(lastAddedAssetId);
+      const timer = setTimeout(() => setHighlightedAssetId(null), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAddedAssetId]);
+
+  const toggleGroup = (groupName) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
   };
 
-  const allowDrop = (e) => {
-    e.preventDefault();
+  const setPage = (groupName, newPage) => {
+    setPageByGroup(prev => ({ ...prev, [groupName]: newPage }));
   };
+
+  const handleRenameGroup = (oldName, newName) => {
+    const trimmed = newName?.trim();
+    if (!trimmed || trimmed === oldName || groups[trimmed]) return;
+
+    setCategoryGroups(prev => {
+      const updated = { ...prev };
+      const oldGroup = updated[activeTab]?.[oldName];
+      if (!oldGroup) return prev;
+
+      delete updated[activeTab][oldName];
+      updated[activeTab][trimmed] = oldGroup;
+      return updated;
+    });
+
+    setOpenMenu(null);
+    setHighlightedGroup(trimmed);
+    setTimeout(() => setHighlightedGroup(null), 1000);
+  };
+
+  const handleDropAsset = (fromGroup, toGroup, assetIndex) => {
+    if (fromGroup === toGroup) return;
+
+    setCategoryGroups(prev => {
+      const updated = { ...prev };
+      const fromAssets = [...updated[activeTab][fromGroup]];
+      const toAssets = [...(updated[activeTab][toGroup] || [])];
+
+      const [moved] = fromAssets.splice(assetIndex, 1);
+      toAssets.push(moved);
+
+      updated[activeTab] = {
+        ...updated[activeTab],
+        [fromGroup]: fromAssets,
+        [toGroup]: toAssets
+      };
+
+      return updated;
+    });
+  };
+
+  let categoryInitial = 0;
+  let categoryActual = 0;
 
   return (
-    <div onDragOver={allowDrop} onDrop={handleDrop} className="min-h-[48px] py-2">
-      {visibleAssets.length > 0 ? (
-        visibleAssets.map((asset, idx) => (
-          <AssetCard
-            key={`${groupName}-${startIdx + idx}-${asset.name}`}
-            asset={asset}
-            marketData={marketData}
-            exchangeRates={exchangeRates}
-            onDelete={() => onDeleteAsset(groupName, startIdx + idx)}
-            activeTab={activeTab}
-            groupName={groupName}
-            assetIndex={startIdx + idx}
-            isHighlighted={asset.id?.toLowerCase() === lastAddedAssetId?.toLowerCase()}
-          />
-        ))
-      ) : (
-        <div className="text-sm text-gray-400 italic px-4 py-2">Arrastra aquí para mover un asset</div>
-      )}
+    <div className="space-y-4">
+      {Object.entries(groups)
+        .sort(([, aAssets], [, bAssets]) => {
+          const getValue = (assets) =>
+            assets.reduce((sum, asset) => {
+              const price = asset.actualCost ?? marketData?.cryptos?.[asset.id]?.eur ?? marketData?.stocks?.[asset.id]?.eur ?? 0;
+              return sum + price * (asset.initialQty || 0);
+            }, 0);
+          return getValue(bAssets) - getValue(aAssets);
+        })
+        .map(([groupName, assets]) => {
+          const page = pageByGroup[groupName] || 1;
+          const isOpen = expandedGroups[groupName] ?? true;
+          const initialValue = assets.reduce((sum, a) => sum + (a.initialCost || 0) * (a.initialQty || 0), 0);
+          const actualValue = assets.reduce((sum, a) => {
+            const price = a.actualCost ?? marketData?.cryptos?.[a.id]?.eur ?? marketData?.stocks?.[a.id]?.eur ?? 0;
+            return sum + price * (a.initialQty || 0);
+          }, 0);
+          const change = initialValue > 0 ? ((actualValue - initialValue) / initialValue) * 100 : 0;
+          const changeColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-500';
+          const isHighlighted = groupName === highlightedGroup;
 
-      {totalPages > 1 && (
-        <div className="flex gap-2 mt-2 px-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(groupName, page - 1)}
-            className={`px-2 py-1 rounded ${page === 1 ? 'bg-gray-300' : 'bg-blue-600 text-white'}`}
-          >
-            Anterior
-          </button>
-          <span className="text-sm px-2 py-1">Página {page} de {totalPages}</span>
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage(groupName, page + 1)}
-            className={`px-2 py-1 rounded ${page === totalPages ? 'bg-gray-300' : 'bg-blue-600 text-white'}`}
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
+          categoryInitial += initialValue;
+          categoryActual += actualValue;
+
+          return (
+            <div key={groupName} className="mb-2 border-b border-gray-200 pb-2">
+              <GroupHeader
+                groupName={groupName}
+                isOpen={isOpen}
+                isHighlighted={isHighlighted}
+                actualValue={actualValue}
+                initialValue={initialValue}
+                change={change}
+                changeColor={changeColor}
+                openMenu={openMenu}
+                setOpenMenu={setOpenMenu}
+                onToggleGroup={toggleGroup}
+                onRenameGroup={handleRenameGroup}
+                onDeleteGroup={onDeleteGroup}
+                allGroupNames={Object.keys(groups)}
+              />
+
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[1000px]' : 'max-h-0'}`}>
+                {isOpen && (
+                  <GroupAssetList
+                    groupName={groupName}
+                    assets={assets}
+                    page={page}
+                    setPage={setPage}
+                    marketData={marketData}
+                    exchangeRates={exchangeRates}
+                    onDeleteAsset={onDeleteAsset}
+                    activeTab={activeTab}
+                    lastAddedAssetId={lastAddedAssetId}
+                    highlightedAssetId={highlightedAssetId}
+                    onDropAsset={handleDropAsset}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+      <GroupSummary initialTotal={categoryInitial} actualTotal={categoryActual} />
     </div>
   );
 }
