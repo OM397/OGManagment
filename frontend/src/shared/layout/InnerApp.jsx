@@ -55,7 +55,7 @@ export default function InnerApp({ user, onLogout }) {
       )}
 
       <main className="flex-1 px-2 sm:px-4 md:px-8 py-4 bg-white">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-full sm:max-w-5xl mx-auto">
           <Topbar user={user} onLogout={onLogout} onToggleSidebar={() => setShowSidebar(prev => !prev)} />
           {selected === 'Assets' && (
             <Portfolio initialData={categoryGroups} exchangeRates={exchangeRates} />
