@@ -6,8 +6,7 @@
   "build": "vite build",
   "serve": "serve -s dist",   
   "preview": "vite preview",
-  "clean": "rm -rf dist .vite node_modules && npm install",
-  "postinstall": "cd client && npm install && npm run build"
+  "clean": "rm -rf dist .vite node_modules && npm install"
 },
 
   "dependencies": {
