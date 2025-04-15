@@ -51,9 +51,9 @@ export default function GroupHeader({
   return (
     <div
       onClick={() => onToggleGroup(groupName)}
-      className={`flex justify-between items-center cursor-pointer ${highlightClass} shadow-sm px-5 py-1 text-sm font-medium transition-colors duration-500`}
+      className={`flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 sm:gap-4 cursor-pointer ${highlightClass} shadow-sm px-5 py-2 text-sm font-medium transition-colors duration-500`}
     >
-      <div className="flex items-center gap-2 capitalize">
+      <div className="capitalize flex-1">
         {isEditing ? (
           <input
             ref={inputRef}
@@ -68,20 +68,20 @@ export default function GroupHeader({
               }
             }}
             onBlur={handleRename}
-            className="px-2 py-1 text-sm border rounded"
+            className="px-2 py-1 text-sm border rounded w-full"
           />
         ) : (
           groupName
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-start sm:items-center gap-4 justify-between w-full sm:w-auto">
         <div className="flex flex-col items-end text-right">
           <div className="text-sm font-bold">{formatter.format(actualValue)}</div>
           <div className="text-xs text-gray-400">vs {formatter.format(initialValue)}</div>
         </div>
 
-        <div className="flex flex-col items-end justify-center text-xs font-medium">
+        <div className="flex flex-col items-end text-xs font-medium">
           <div className={`px-2 py-0.5 mb-0.5 border ${
             change >= 0
               ? 'bg-green-50 text-green-600 border-green-100'
@@ -93,7 +93,7 @@ export default function GroupHeader({
           <div className={changeColor}>{change.toFixed(2)}%</div>
         </div>
 
-        <div className="ml-2 flex items-center">
+        <div className="flex items-center">
           {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
 
