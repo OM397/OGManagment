@@ -1,5 +1,5 @@
 // 📁 frontend/src/shared/layout/InnerApp.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../Sidebar';
 import Topbar from '../Topbar';
 import Portfolio from '../../features/portfolio/Portfolio';
@@ -12,6 +12,14 @@ export default function InnerApp({ user, onLogout }) {
   const [exchangeRates] = useState({ EUR: 1, USD: 1.1, GBP: 0.85 });
   const { marketData } = useMarketData(categoryGroups || {}, 0);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   let totalValue = 0;
   Object.values(categoryGroups || {}).forEach(category => {
@@ -31,7 +39,7 @@ export default function InnerApp({ user, onLogout }) {
 
   const handleSetSelected = (name) => {
     setSelected(name);
-    if (window.innerWidth < 768) setShowSidebar(false);
+    if (isMobile) setShowSidebar(false);
   };
 
   if (!categoryGroups) {
@@ -40,7 +48,7 @@ export default function InnerApp({ user, onLogout }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {(showSidebar || window.innerWidth >= 768) && (
+      {(showSidebar || !isMobile) && (
         <div className="md:block">
           <Sidebar selected={selected} setSelected={handleSetSelected} totalValue={totalValue} />
         </div>
