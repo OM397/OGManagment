@@ -1,4 +1,3 @@
-// 📁 frontend/src/shared/Topbar.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCw, UserCircle, ChevronDown, Menu } from 'lucide-react';
 import { API_BASE } from './config';
@@ -35,18 +34,20 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
   }, []);
 
   return (
-    <header className="flex justify-between items-center py-3 px-6 border-b bg-white mb-6">
-      <div className="flex items-center gap-4">
+    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-3 px-4 sm:px-6 border-b bg-white mb-6">
+      {/* Left */}
+      <div className="flex items-center gap-3 sm:gap-4">
         <button
           className="md:hidden text-gray-600 hover:text-black"
           onClick={onToggleSidebar}
         >
           <Menu size={20} />
         </button>
-        <div className="text-xs text-gray-500">Portfolio</div>
+        <div className="text-xs text-gray-500 font-medium">Portfolio</div>
       </div>
 
-      <div className="flex items-center gap-6">
+      {/* Right */}
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-6 text-sm w-full sm:w-auto justify-between sm:justify-end">
         <button onClick={onReload} className="text-gray-500 hover:text-black transition">
           <RefreshCw size={18} />
         </button>
@@ -59,7 +60,7 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
             className="flex items-center gap-2 text-sm text-gray-700 hover:text-black transition"
           >
             <UserCircle size={20} className="text-gray-400" />
-            <span>{username || 'Cargando...'}</span>
+            <span className="max-w-[100px] truncate">{username || 'Cargando...'}</span>
             <ChevronDown size={16} />
           </button>
 

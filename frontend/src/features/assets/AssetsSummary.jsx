@@ -1,4 +1,3 @@
-// AssetsSummary.jsx
 import React from 'react';
 import { formatter } from '../../shared/utils';
 
@@ -33,15 +32,15 @@ export default function AssetsSummary({ initialData, marketData }) {
     isPositive ? 'text-green-600' : changePct < 0 ? 'text-red-600' : 'text-gray-500';
 
   return (
-    <div className="mb-8 p-6 bg-white dark:bg-muted rounded-2xl shadow-sm">
-      <div className="flex items-end gap-6 flex-wrap">
+    <div className="mb-8 p-4 sm:p-6 bg-white dark:bg-muted rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 flex-wrap sm:gap-6">
         {/* Net Worth */}
-        <div className="text-4xl font-bold text-gray-900 dark:text-white leading-none">
+        <div className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-none">
           {formatter.format(totalActual)}
         </div>
 
-        {/* ABS and % Variations aligned */}
-        <div className="grid grid-cols-2 gap-4 text-center">
+        {/* ABS and % Variations */}
+        <div className="grid grid-cols-2 gap-4 text-center sm:text-left">
           <div>
             <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-1">
               ABS.
