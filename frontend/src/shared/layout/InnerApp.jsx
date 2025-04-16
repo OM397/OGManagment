@@ -47,14 +47,14 @@ export default function InnerApp({ user, onLogout }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="h-screen md:min-h-screen flex flex-col md:flex-row overflow-hidden">
       {(showSidebar || !isMobile) && (
         <div className="md:block w-full md:w-auto">
           <Sidebar selected={selected} setSelected={handleSetSelected} totalValue={totalValue} />
         </div>
       )}
 
-      <main className="flex-1 px-2 sm:px-4 md:px-8 py-4 bg-white">
+      <main className="flex-1 px-2 sm:px-4 md:px-8 py-4 bg-white overflow-y-auto">
         <div className="max-w-full sm:max-w-5xl mx-auto">
           <Topbar user={user} onLogout={onLogout} onToggleSidebar={() => setShowSidebar(prev => !prev)} />
           {selected === 'Assets' && (
