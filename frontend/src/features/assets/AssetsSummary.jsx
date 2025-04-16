@@ -1,5 +1,23 @@
+// 📁 frontend/features/assets/AssetsSummary.jsx
 import React from 'react';
+import { useSpring, animated } from '@react-spring/web';
 import { formatter } from '../../shared/utils';
+
+function AnimatedNumber({ value }) {
+  const { number } = useSpring({
+    from: { number: 0 },
+    number: value,
+    config: { mass: 1, tension: 140, friction: 20 }
+  });
+
+  return (
+    <animated.span>
+      {number.to(val =>
+        formatter.format(Number(val.toFixed(0)))
+      )}
+    </animated.span>
+  );
+}
 
 export default function AssetsSummary({ initialData, marketData }) {
   let totalInitial = 0;
@@ -13,10 +31,7 @@ export default function AssetsSummary({ initialData, marketData }) {
 
           const initialValue = initialQty * initialCost;
           const actualPrice =
-            actualCost ??
-            marketData?.cryptos?.[id]?.eur ??
-            marketData?.stocks?.[id]?.eur ??
-            0;
+            actualCost ?? marketData?.cryptos?.[id]?.eur ?? marketData?.stocks?.[id]?.eur ?? 0;
 
           const actualValue = initialQty * actualPrice;
 
@@ -36,9 +51,9 @@ export default function AssetsSummary({ initialData, marketData }) {
   return (
     <div className="w-full mb-6 p-4 sm:p-6 bg-white rounded-2xl shadow-sm">
       <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6 flex-wrap">
-        {/* Net Worth */}
+        {/* Net Worth Animated */}
         <div className="text-3xl sm:text-4xl font-bold text-gray-900 leading-none">
-          {formatter.format(totalActual)}
+          <AnimatedNumber value={totalActual} />
         </div>
 
         {/* ABS and % */}

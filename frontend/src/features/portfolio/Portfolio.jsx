@@ -165,13 +165,9 @@ export default function Portfolio({ initialData, exchangeRates, reloadMarketData
             );
           })}
         </div>
-      </div>
+      </div>,
+    
 
-      {marketDataError && (
-        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-          ❌ {marketDataError}
-        </div>
-      )}
 
       <GroupManager
         activeTab={activeTab}

@@ -1,16 +1,16 @@
 {
   "name": "frontend",
   "version": "1.0.0",
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "serve": "serve -s dist",   
-  "preview": "vite preview",
-  "clean": "rm -rf dist .vite node_modules && npm install"
-},
-
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "serve -s dist",
+    "preview": "vite preview",
+    "clean": "rm -rf dist .vite node_modules && npm install"
+  },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@react-spring/web": "^9.7.5",
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.8.4",
     "fuse.js": "^7.1.0",

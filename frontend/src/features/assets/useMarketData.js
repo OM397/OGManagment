@@ -1,19 +1,15 @@
 // 📁 frontend/src/features/assets/useMarketData.js
+
 import { useEffect, useState } from 'react';
 import { API_BASE } from '../../shared/config';
 
-const STORAGE_KEY = 'lastValidMarketData';
+const LOCAL_STORAGE_KEY = 'lastSuccessfulMarketData';
 
 export default function useMarketData(categoryGroups, reloadTrigger = 0) {
   const [marketData, setMarketData] = useState(() => {
-    try {
-      const cached = localStorage.getItem(STORAGE_KEY);
-      return cached ? JSON.parse(cached) : { cryptos: {}, stocks: {} };
-    } catch {
-      return { cryptos: {}, stocks: {} };
-    }
+    const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return cached ? JSON.parse(cached) : { cryptos: {}, stocks: {} };
   });
-
   const [tickersData, setTickersData] = useState({ cryptos: [], stocks: [] });
   const [error, setError] = useState(null);
 
@@ -39,10 +35,13 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
           const name = asset.name?.toLowerCase();
           const symbol = asset.symbol?.toLowerCase();
           const rawId = asset.id || symbolToId[name] || nameToId[name];
+
           if (!rawId) return;
+
           const id = rawId.toLowerCase().trim();
           const isCrypto = symbolToId[name] || nameToId[name];
           const type = asset.type || (isCrypto ? 'crypto' : 'stock');
+
           tickerSet.set(id, { id, type });
         });
       });
@@ -60,25 +59,41 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
           body: JSON.stringify(tickerList)
         });
 
-        if (!response.ok) throw new Error(`Status ${response.status}: ${response.statusText}`);
+        if (!response.ok) throw new Error(`Status ${response.status}`);
 
         const data = await response.json();
-        setMarketData(data);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+        const missing = tickerList.some(({ id, type }) => {
+          const group = type === 'crypto' ? data.cryptos : data.stocks;
+          return !group?.[id];
+        });
+
+        if (missing) {
+          console.warn('⚠️ Datos incompletos. Usando marketData del caché.');
+          const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (cached) {
+            setMarketData(JSON.parse(cached));
+            setError('No se pudieron obtener algunos precios. Se muestran datos anteriores.');
+          }
+        } else {
+          setMarketData(data);
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+        }
       } catch (err) {
-        console.error('❌ Error fetching market data:', err.message);
-        setError('No se pudieron obtener los precios actualizados. Mostrando últimos datos disponibles.');
-        try {
-          const cached = localStorage.getItem(STORAGE_KEY);
-          if (cached) setMarketData(JSON.parse(cached));
-        } catch {
-          setMarketData({ cryptos: {}, stocks: {} });
+        console.error('❌ Error al obtener market data:', err.message);
+        const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (cached) {
+          setMarketData(JSON.parse(cached));
+          setError('No se pudieron obtener los precios. Mostrando datos anteriores.');
+        } else {
+          setError('No se pudieron obtener precios y no hay datos anteriores.');
         }
       }
     };
 
     const tickers = collectTickers();
     fetchMarketData(tickers);
+
     const interval = setInterval(() => fetchMarketData(collectTickers()), 90000);
     return () => clearInterval(interval);
   }, [categoryGroups, reloadTrigger, tickersData]);
