@@ -1,10 +1,19 @@
 // 📁 frontend/src/features/assets/useMarketData.js
-
 import { useEffect, useState } from 'react';
 import { API_BASE } from '../../shared/config';
 
+const STORAGE_KEY = 'lastValidMarketData';
+
 export default function useMarketData(categoryGroups, reloadTrigger = 0) {
-  const [marketData, setMarketData] = useState({ cryptos: {}, stocks: {} });
+  const [marketData, setMarketData] = useState(() => {
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      return cached ? JSON.parse(cached) : { cryptos: {}, stocks: {} };
+    } catch {
+      return { cryptos: {}, stocks: {} };
+    }
+  });
+
   const [tickersData, setTickersData] = useState({ cryptos: [], stocks: [] });
   const [error, setError] = useState(null);
 
@@ -30,13 +39,10 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
           const name = asset.name?.toLowerCase();
           const symbol = asset.symbol?.toLowerCase();
           const rawId = asset.id || symbolToId[name] || nameToId[name];
-
           if (!rawId) return;
-
           const id = rawId.toLowerCase().trim();
           const isCrypto = symbolToId[name] || nameToId[name];
           const type = asset.type || (isCrypto ? 'crypto' : 'stock');
-
           tickerSet.set(id, { id, type });
         });
       });
@@ -49,28 +55,30 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
         setError(null);
         const response = await fetch(`${API_BASE}/market-data`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(tickerList)
         });
 
-        if (!response.ok) {
-          throw new Error(`Status ${response.status}: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Status ${response.status}: ${response.statusText}`);
 
         const data = await response.json();
         setMarketData(data);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       } catch (err) {
-        console.error('❌ Error fetching market data:', err);
-        setError('No se pudieron obtener los precios actualizados. Intenta de nuevo más tarde.');
+        console.error('❌ Error fetching market data:', err.message);
+        setError('No se pudieron obtener los precios actualizados. Mostrando últimos datos disponibles.');
+        try {
+          const cached = localStorage.getItem(STORAGE_KEY);
+          if (cached) setMarketData(JSON.parse(cached));
+        } catch {
+          setMarketData({ cryptos: {}, stocks: {} });
+        }
       }
     };
 
     const tickers = collectTickers();
     fetchMarketData(tickers);
-
     const interval = setInterval(() => fetchMarketData(collectTickers()), 90000);
     return () => clearInterval(interval);
   }, [categoryGroups, reloadTrigger, tickersData]);
