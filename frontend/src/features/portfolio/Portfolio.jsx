@@ -8,14 +8,13 @@ import { CATEGORIES } from '../../shared/config';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
 import { formatter } from '../../shared/utils';
 
-export default function Portfolio({ initialData, exchangeRates }) {
+export default function Portfolio({ initialData, exchangeRates, reloadMarketData }) {
   const [activeTab, setActiveTab] = useState('Investments');
   const [showAddInvestment, setShowAddInvestment] = useState(false);
-  const [reloadMarketData, setReloadMarketData] = useState(0);
   const [lastAddedGroupName, setLastAddedGroupName] = useState(null);
   const [lastRenamedGroupName, setLastRenamedGroupName] = useState(null);
   const [lastAddedAssetId, setLastAddedAssetId] = useState(null);
-  const [allExpanded, setAllExpanded] = useState(true); // 🔹 Nuevo estado
+  const [allExpanded, setAllExpanded] = useState(true);
 
   const { categoryGroups, setCategoryGroups } = useCategoryGroups();
   const normalizedGroups = categoryGroups[activeTab] || {};
@@ -51,7 +50,6 @@ export default function Portfolio({ initialData, exchangeRates }) {
       };
       return updated;
     });
-    setReloadMarketData(prev => prev + 1);
   };
 
   const handleDeleteGroup = (groupName) => {
@@ -65,7 +63,6 @@ export default function Portfolio({ initialData, exchangeRates }) {
       updated[activeTab] = newGroups;
       return updated;
     });
-    setReloadMarketData(prev => prev + 1);
   };
 
   const handleRenameGroup = (oldName, newName) => {
@@ -186,25 +183,23 @@ export default function Portfolio({ initialData, exchangeRates }) {
         setLastAddedAssetId={setLastAddedAssetId}
       />
 
-    {/* 🔹 Botón toggle para todos los grupos */}
-<div className="flex justify-end mb-3">
-  <button
-    onClick={() => setAllExpanded(prev => !prev)}
-    className="flex items-center gap-1 text-sm text-gray-600 hover:text-black transition"
-    title={allExpanded ? 'Colapsar todos los grupos' : 'Expandir todos los grupos'}
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className={`h-5 w-5 transition-transform duration-200 ${allExpanded ? 'rotate-180' : ''}`}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  </button>
-</div>
-
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={() => setAllExpanded(prev => !prev)}
+          className="flex items-center gap-1 text-sm text-gray-600 hover:text-black transition"
+          title={allExpanded ? 'Colapsar todos los grupos' : 'Expandir todos los grupos'}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`h-5 w-5 transition-transform duration-200 ${allExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
 
       <AssetGroupList
         groups={normalizedGroups}
@@ -217,7 +212,7 @@ export default function Portfolio({ initialData, exchangeRates }) {
         lastAddedGroupName={lastAddedGroupName}
         lastAddedAssetId={lastAddedAssetId}
         lastRenamedGroupName={lastRenamedGroupName}
-        allExpanded={allExpanded} // 🔹 nueva prop
+        allExpanded={allExpanded}
       />
     </div>
   );

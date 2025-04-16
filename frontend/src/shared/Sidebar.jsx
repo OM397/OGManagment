@@ -1,3 +1,4 @@
+// 📁 frontend/src/shared/Sidebar.jsx
 import React from 'react';
 import { formatter } from './utils';
 import { BarChart2, Gem } from 'lucide-react';
@@ -11,8 +12,14 @@ export default function Sidebar({ selected, setSelected, totalValue = 0 }) {
   return (
     <aside className="w-64 min-w-[16rem] max-w-[16rem] shrink-0 bg-[#f5f5f5] border-r min-h-screen flex flex-col justify-between">
       <div>
-        {/* Branding */}
-        <div className="p-6 font-semibold text-sm tracking-wide text-gray-800">OG MANAGEMENTS</div>
+        {/* Branding - Bigger logo text image */}
+        <div className="p-6 flex justify-center">
+          <img
+            src="/logo-text.png"
+            alt="OG Managements"
+            className="h-10 w-auto object-contain" // ← altura aumentada
+          />
+        </div>
 
         {/* Navigation */}
         <nav className="px-3 space-y-1">

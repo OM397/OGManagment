@@ -10,7 +10,8 @@ export default function InnerApp({ user, onLogout }) {
   const { categoryGroups } = useCategoryGroups();
   const [selected, setSelected] = useState('Assets');
   const [exchangeRates] = useState({ EUR: 1, USD: 1.1, GBP: 0.85 });
-  const { marketData } = useMarketData(categoryGroups || {}, 0);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const { marketData } = useMarketData(categoryGroups || {}, reloadTrigger);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -42,6 +43,10 @@ export default function InnerApp({ user, onLogout }) {
     if (isMobile) setShowSidebar(false);
   };
 
+  const handleReload = () => {
+    setReloadTrigger(prev => prev + 1);
+  };
+
   if (!categoryGroups) {
     return <div className="p-6 text-center">Cargando datos del usuario...</div>;
   }
@@ -56,9 +61,18 @@ export default function InnerApp({ user, onLogout }) {
 
       <main className="flex-1 px-2 sm:px-4 md:px-8 py-4 bg-white overflow-y-auto">
         <div className="max-w-full sm:max-w-5xl mx-auto">
-          <Topbar user={user} onLogout={onLogout} onToggleSidebar={() => setShowSidebar(prev => !prev)} />
+          <Topbar
+            user={user}
+            onLogout={onLogout}
+            onReload={handleReload}
+            onToggleSidebar={() => setShowSidebar(prev => !prev)}
+          />
           {selected === 'Assets' && (
-            <Portfolio initialData={categoryGroups} exchangeRates={exchangeRates} />
+            <Portfolio
+              initialData={categoryGroups}
+              exchangeRates={exchangeRates}
+              reloadMarketData={reloadTrigger}
+            />
           )}
         </div>
       </main>
