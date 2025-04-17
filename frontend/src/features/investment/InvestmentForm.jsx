@@ -1,3 +1,5 @@
+// 📁 frontend/src/features/assets/InvestmentForm.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
 import AssetSearchInput from './AssetSearchInput';
@@ -64,11 +66,13 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
       id: activeTab === 'Investments' ? id : name.toLowerCase().replace(/\s+/g, '-'),
       initialQty: qty,
       initialCost: price,
-      type: assetType === 'Cryptos' ? 'crypto' : 'stock'
+      type: activeTab === 'Investments'
+        ? (assetType === 'Cryptos' ? 'crypto' : 'stock')
+        : 'manual'
     };
 
     if (activeTab !== 'Investments') {
-      newAsset.actualCost = actual;
+      newAsset.manualValue = actual;
     }
 
     setCategoryGroups(prev => {

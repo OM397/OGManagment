@@ -17,23 +17,25 @@ export default function AssetCard({
   const [isOpen, setIsOpen] = useState(false);
   const [editCost, setEditCost] = useState(asset.initialCost);
   const [editQty, setEditQty] = useState(asset.initialQty);
+  const [editActual, setEditActual] = useState(asset.manualValue ?? asset.actualCost ?? 0);
   const [editMode, setEditMode] = useState(false);
   const [highlight, setHighlight] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
   const { setCategoryGroups } = useCategoryGroups();
 
-  const { name, id, initialQty, initialCost } = asset;
+  const { name, id, initialQty, initialCost, type: assetType, manualValue } = asset;
 
-  const type = asset.type || (
+  const type = assetType || (
     marketData?.cryptos?.[id?.toLowerCase()] ? 'crypto' :
-    marketData?.stocks?.[id?.toLowerCase()] ? 'stock' : null
+    marketData?.stocks?.[id?.toLowerCase()] ? 'stock' : 'manual'
   );
 
   const priceSource = type === 'crypto' ? marketData.cryptos : marketData.stocks;
   const sourceData = priceSource?.[id?.toLowerCase()];
-  const actualPrice = sourceData?.eur ?? 0;
-  const stockCurrency = sourceData?.currency;
+  const marketPrice = sourceData?.eur ?? 0;
 
+  const actualPrice = type === 'manual' ? manualValue ?? 0 : marketPrice;
+  const stockCurrency = sourceData?.currency;
   const wasConverted = stockCurrency && stockCurrency !== 'EUR';
 
   const initialValue = initialQty * initialCost;
@@ -61,17 +63,31 @@ export default function AssetCard({
   const handleSave = () => {
     const parsedCost = parseFloat(editCost);
     const parsedQty = parseFloat(editQty);
+    const parsedActual = parseFloat(editActual);
+
     if (isNaN(parsedCost) || isNaN(parsedQty) || parsedCost <= 0 || parsedQty <= 0) {
       alert('Valores inválidos.');
       return;
     }
 
+    if (type === 'manual' && (isNaN(parsedActual) || parsedActual <= 0)) {
+      alert('Actual value inválido.');
+      return;
+    }
+
     setCategoryGroups(prev => {
       const updated = { ...prev };
-      updated[activeTab][groupName][assetIndex].initialCost = parsedCost;
-      updated[activeTab][groupName][assetIndex].initialQty = parsedQty;
+      const asset = updated[activeTab][groupName][assetIndex];
+
+      asset.initialCost = parsedCost;
+      asset.initialQty = parsedQty;
+      if (type === 'manual') {
+        asset.manualValue = parsedActual;
+      }
+
       return updated;
     });
+
     setEditMode(false);
   };
 
@@ -184,14 +200,23 @@ export default function AssetCard({
 
           <div>
             <div className="text-gray-400">Actual Cost</div>
-            <div className="group relative w-fit">
-              <span>{formatter.format(actualPrice.toFixed(2))}</span>
-              {type === 'stock' && wasConverted && (
-                <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow z-10">
-                  Convertido desde {stockCurrency}
-                </div>
-              )}
-            </div>
+            {editMode && type === 'manual' ? (
+              <input
+                type="number"
+                value={editActual}
+                onChange={(e) => setEditActual(e.target.value)}
+                className="w-full border-b border-gray-300 focus:outline-none"
+              />
+            ) : (
+              <div className="group relative w-fit">
+                <span>{formatter.format(actualPrice.toFixed(2))}</span>
+                {type === 'stock' && wasConverted && (
+                  <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow z-10">
+                    Convertido desde {stockCurrency}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>

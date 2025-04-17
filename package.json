@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@react-spring/web": "^9.7.5"
+    "@react-spring/web": "^9.7.5",
+    "recharts": "^2.15.2"
   }
 }

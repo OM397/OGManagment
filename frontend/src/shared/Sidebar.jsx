@@ -2,28 +2,30 @@
 import React from 'react';
 import { formatter } from './utils';
 import { BarChart2, Gem } from 'lucide-react';
+import { calculateTotals } from './calculateAssetTotals';
 
-export default function Sidebar({ selected, setSelected, totalValue = 0 }) {
+export default function Sidebar({ selected, setSelected, categoryGroups = {}, marketData = {} }) {
   const navItems = [
-    { name: 'Net Worth', icon: <BarChart2 size={18} /> },
-    { name: 'Assets', icon: <Gem size={18} /> }
+    { name: 'Net Worth', label: 'Investments', icon: <BarChart2 size={18} /> },
+    { name: 'Assets', label: 'Assets', icon: <Gem size={18} /> }
   ];
+
+  const { totalActual: investmentsValue } = calculateTotals(categoryGroups, marketData, true);
+  const { totalActual: allAssetsValue } = calculateTotals(categoryGroups, marketData, false);
 
   return (
     <aside className="w-64 min-w-[16rem] max-w-[16rem] shrink-0 bg-[#f5f5f5] border-r min-h-screen flex flex-col justify-between">
       <div>
-        {/* Branding - Bigger logo text image */}
         <div className="p-6 flex justify-center">
           <img
             src="/logo-text.png"
             alt="OG Managements"
-            className="h-10 w-auto object-contain" // ← altura aumentada
+            className="h-10 w-auto object-contain"
           />
         </div>
 
-        {/* Navigation */}
         <nav className="px-3 space-y-1">
-          {navItems.map(({ name, icon }) => {
+          {navItems.map(({ name, label, icon }) => {
             const isActive = selected === name;
 
             return (
@@ -39,25 +41,22 @@ export default function Sidebar({ selected, setSelected, totalValue = 0 }) {
                 <div className="flex items-center gap-2">
                   {icon}
                   <div className="flex flex-col items-start">
-                    <span>{name}</span>
+                    <span>{label}</span>
                     {name === 'Net Worth' && (
                       <span className="text-[11px] text-gray-500">Dashboard</span>
                     )}
                   </div>
                 </div>
 
-                {name === 'Assets' && (
-                  <span className="text-sm text-gray-500 font-normal">
-                    {formatter.format(totalValue)}
-                  </span>
-                )}
+                <span className="text-sm text-gray-500 font-normal">
+                  {formatter.format(name === 'Net Worth' ? investmentsValue : allAssetsValue)}
+                </span>
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Footer */}
       <div className="text-[11px] text-gray-400 p-4">
         <p>Made by El Gato ✨</p>
       </div>

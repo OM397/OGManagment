@@ -15,7 +15,7 @@ export default function AssetGroupList({
   lastAddedGroupName,
   lastAddedAssetId,
   lastRenamedGroupName,
-  allExpanded = true // 🔹 Nuevo prop
+  allExpanded = true
 }) {
   const { setCategoryGroups } = useCategoryGroups();
 
@@ -52,7 +52,6 @@ export default function AssetGroupList({
     }
   }, [lastAddedAssetId]);
 
-  // 🔹 Sincroniza allExpanded
   useEffect(() => {
     const newState = {};
     for (const name of Object.keys(groups)) {
@@ -120,22 +119,48 @@ export default function AssetGroupList({
       {Object.entries(groups)
         .sort(([, aAssets], [, bAssets]) => {
           const getValue = (assets) =>
-            assets.reduce((sum, asset) => {
-              const price = asset.actualCost ?? marketData?.cryptos?.[asset.id]?.eur ?? marketData?.stocks?.[asset.id]?.eur ?? 0;
-              return sum + price * (asset.initialQty || 0);
+            assets.reduce((sum, a) => {
+              const price =
+                a.type === 'manual'
+                  ? a.manualValue ?? 0
+                  : a.actualCost ??
+                    marketData?.cryptos?.[a.id]?.eur ??
+                    marketData?.stocks?.[a.id]?.eur ??
+                    0;
+              return sum + price * (a.initialQty || 0);
             }, 0);
           return getValue(bAssets) - getValue(aAssets);
         })
         .map(([groupName, assets]) => {
           const page = pageByGroup[groupName] || 1;
           const isOpen = expandedGroups[groupName] ?? true;
-          const initialValue = assets.reduce((sum, a) => sum + (a.initialCost || 0) * (a.initialQty || 0), 0);
+
+          const initialValue = assets.reduce(
+            (sum, a) => sum + (a.initialCost || 0) * (a.initialQty || 0),
+            0
+          );
+
           const actualValue = assets.reduce((sum, a) => {
-            const price = a.actualCost ?? marketData?.cryptos?.[a.id]?.eur ?? marketData?.stocks?.[a.id]?.eur ?? 0;
+            const price =
+              a.type === 'manual'
+                ? a.manualValue ?? 0
+                : a.actualCost ??
+                  marketData?.cryptos?.[a.id]?.eur ??
+                  marketData?.stocks?.[a.id]?.eur ??
+                  0;
             return sum + price * (a.initialQty || 0);
           }, 0);
-          const change = initialValue > 0 ? ((actualValue - initialValue) / initialValue) * 100 : 0;
-          const changeColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-500';
+
+          const change =
+            initialValue > 0 ? ((actualValue - initialValue) / initialValue) * 100 : 0;
+
+          const changeColor =
+            change > 0
+              ? 'text-green-600'
+              : change < 0
+              ? 'text-red-600'
+              : 'text-gray-500';
+
           const isHighlighted = groupName === highlightedGroup;
 
           categoryInitial += initialValue;
@@ -159,7 +184,11 @@ export default function AssetGroupList({
                 allGroupNames={Object.keys(groups)}
               />
 
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[1000px]' : 'max-h-0'}`}>
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  isOpen ? 'max-h-[1000px]' : 'max-h-0'
+                }`}
+              >
                 {isOpen && (
                   <GroupAssetList
                     groupName={groupName}

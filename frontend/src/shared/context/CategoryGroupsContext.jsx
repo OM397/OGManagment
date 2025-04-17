@@ -12,12 +12,20 @@ export const CategoryGroupsProvider = ({ initialData, children }) => {
   const timeoutRef = useRef(null);
   const isInitialLoadDone = useRef(false);
 
+  // 🔧 Normaliza las claves antes de enviar al backend
+  const normalizeKeys = (groups) => ({
+    Investments: groups['Investments'] || {},
+    RealEstate: groups['Real Estate'] || groups['RealEstate'] || {},
+    Others: groups['Others'] || {}
+  });
+
   const saveUserData = async (categoryGroupsToSave) => {
     if (!categoryGroupsToSave) return;
     try {
+      const normalized = normalizeKeys(categoryGroupsToSave);
       await axios.post(
         `${API_BASE}/user-data`,
-        { data: categoryGroupsToSave },
+        { data: normalized },
         { withCredentials: true }
       );
       console.log('💾 Datos guardados correctamente');

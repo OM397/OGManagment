@@ -12,26 +12,31 @@ function AnimatedNumber({ value }) {
 
   return (
     <animated.span>
-      {number.to(val =>
-        formatter.format(Number(val.toFixed(0)))
-      )}
+      {number.to(val => formatter.format(Number(val.toFixed(0))))}
     </animated.span>
   );
 }
 
-export default function AssetsSummary({ initialData, marketData }) {
+export default function AssetsSummary({ initialData, marketData, onlyInvestments = false }) {
   let totalInitial = 0;
   let totalActual = 0;
 
-  Object.values(initialData).forEach(category => {
+  const categories = onlyInvestments
+    ? { Investments: initialData?.Investments || {} }
+    : initialData;
+
+  Object.values(categories || {}).forEach(category => {
     Object.values(category).forEach(group => {
       if (Array.isArray(group)) {
         group.forEach(asset => {
-          const { initialQty = 0, initialCost = 0, id, actualCost } = asset;
+          const { initialQty = 0, initialCost = 0, id, actualCost, manualValue, type } = asset;
 
           const initialValue = initialQty * initialCost;
+
           const actualPrice =
-            actualCost ?? marketData?.cryptos?.[id]?.eur ?? marketData?.stocks?.[id]?.eur ?? 0;
+            type === 'manual'
+              ? manualValue ?? 0
+              : actualCost ?? marketData?.cryptos?.[id]?.eur ?? marketData?.stocks?.[id]?.eur ?? 0;
 
           const actualValue = initialQty * actualPrice;
 
@@ -51,12 +56,10 @@ export default function AssetsSummary({ initialData, marketData }) {
   return (
     <div className="w-full mb-6 p-4 sm:p-6 bg-white rounded-2xl shadow-sm">
       <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6 flex-wrap">
-        {/* Net Worth Animated */}
         <div className="text-3xl sm:text-4xl font-bold text-gray-900 leading-none">
           <AnimatedNumber value={totalActual} />
         </div>
 
-        {/* ABS and % */}
         <div className="grid grid-cols-2 gap-4 text-center sm:text-left">
           <div>
             <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-1">

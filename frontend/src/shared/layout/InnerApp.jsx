@@ -5,6 +5,7 @@ import Topbar from '../Topbar';
 import Portfolio from '../../features/portfolio/Portfolio';
 import useMarketData from '../../features/assets/useMarketData';
 import { useCategoryGroups } from '../context/CategoryGroupsContext';
+import History from '../../pages/History';
 
 export default function InnerApp({ user, onLogout }) {
   const { categoryGroups } = useCategoryGroups();
@@ -55,7 +56,13 @@ export default function InnerApp({ user, onLogout }) {
     <div className="h-screen md:min-h-screen flex flex-col md:flex-row overflow-hidden">
       {(showSidebar || !isMobile) && (
         <div className="md:block w-full md:w-auto">
-          <Sidebar selected={selected} setSelected={handleSetSelected} totalValue={totalValue} />
+          <Sidebar
+            selected={selected}
+            setSelected={handleSetSelected}
+            totalValue={totalValue}
+            categoryGroups={categoryGroups}
+            marketData={marketData}
+          />
         </div>
       )}
 
@@ -67,12 +74,17 @@ export default function InnerApp({ user, onLogout }) {
             onReload={handleReload}
             onToggleSidebar={() => setShowSidebar(prev => !prev)}
           />
+
           {selected === 'Assets' && (
             <Portfolio
               initialData={categoryGroups}
               exchangeRates={exchangeRates}
               reloadMarketData={reloadTrigger}
             />
+          )}
+
+          {selected === 'Net Worth' && (
+            <History />
           )}
         </div>
       </main>

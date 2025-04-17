@@ -20,11 +20,12 @@ if (!JWT_SECRET || !MONGODB_URI) {
 const baseDir = __dirname.includes('backend') ? './routes' : './backend/routes';
 const middlewareBase = __dirname.includes('backend') ? './middleware' : './backend/middleware';
 
-// ✅ Importa rutas y middleware usando rutas correctas en cada entorno
+// ✅ Importa rutas y middleware
 const tickersRoutes = require(path.join(__dirname, baseDir, 'tickersRoutes.js'));
 const authRoutes = require(path.join(__dirname, baseDir, 'authRoutes.js'));
 const adminRoutes = require(path.join(__dirname, baseDir, 'adminRoutes.js'));
 const userRoutes = require(path.join(__dirname, baseDir, 'userRoutes.js'));
+const tickersHistoryRoutes = require(path.join(__dirname, baseDir, 'tickersHistoryRoutes.js'));
 const authMiddleware = require(path.join(__dirname, middlewareBase, 'authMiddleware.js'));
 
 mongoose.connect(MONGODB_URI, {
@@ -61,11 +62,12 @@ const authLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta más tarde.' }
 });
 
-// ✅ Rutas principales
+// ✅ Rutas API
 app.use('/api', tickersRoutes);
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', tickersHistoryRoutes); // 👈 Nueva ruta añadida
 
 // ✅ SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));

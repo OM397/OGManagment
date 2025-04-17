@@ -1,6 +1,5 @@
 // 📁 frontend/src/features/assets/useMarketData.js
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { API_BASE } from '../../shared/config';
 
 const LOCAL_STORAGE_KEY = 'lastSuccessfulMarketData';
@@ -27,7 +26,7 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
     const nameToId = Object.fromEntries(tickersData.cryptos.map(t => [t.name.toLowerCase(), t.id]));
 
     const collectTickers = () => {
-      const groups = categoryGroups['Investments'] || {};
+      const groups = categoryGroups?.['Investments'] || {};
       const tickerSet = new Map();
 
       Object.entries(groups).forEach(([_, assetList]) => {
@@ -35,7 +34,6 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
           const name = asset.name?.toLowerCase();
           const symbol = asset.symbol?.toLowerCase();
           const rawId = asset.id || symbolToId[name] || nameToId[name];
-
           if (!rawId) return;
 
           const id = rawId.toLowerCase().trim();
@@ -98,5 +96,16 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
     return () => clearInterval(interval);
   }, [categoryGroups, reloadTrigger, tickersData]);
 
-  return { marketData, error };
+  const exchangeRates = useMemo(() => {
+    const rates = {};
+    Object.entries(marketData?.stocks || {}).forEach(([id, data]) => {
+      if (data.currency && data.currency !== 'EUR') {
+        rates[id.toLowerCase()] = { currency: data.currency, rate: data.eur / data.rawPrice };
+        rates[data.currency] = data.eur / data.rawPrice;
+      }
+    });
+    return rates;
+  }, [marketData]);
+
+  return { marketData, exchangeRates, error };
 }

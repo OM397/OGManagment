@@ -1,9 +1,11 @@
 # --- Build frontend ---
     FROM node:20-alpine AS frontend-builder
     WORKDIR /frontend
+    
     COPY frontend/package*.json ./
     COPY frontend/.env.production .env.production
     RUN npm install
+    
     COPY frontend/ ./
     RUN npm run build
     
@@ -15,18 +17,13 @@
     COPY backend/package*.json ./
     RUN npm install
     
-    COPY backend/server.js ./
     COPY backend ./backend
-    COPY frontend ./frontend
+    COPY backend/server.js ./
     
-    # ✅ Copy built frontend into public dir
+    # ✅ Copia frontend compilado entero
     COPY --from=frontend-builder /frontend/dist ./public
     
-    # ✅ Check if frontend build files exist
-    RUN ls -la /app/public
-    
     EXPOSE 3000
-    RUN find /app/public -type f
-
+    
     CMD ["node", "server.js"]
     
