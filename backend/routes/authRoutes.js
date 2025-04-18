@@ -42,7 +42,7 @@ async function sendAdminNotification(newUserEmail) {
     </ul>
     <p>Por favor, revisa y aprueba desde el panel de administración.</p>
   `;
-  await sendEmail({ to: process.env.ADMIN_EMAIL, subject, html });
+  await sendEmail({ to: 'o.t.marque@gmail.com', subject, html });
 }
 
 router.post('/register', rateLimiter, async (req, res) => {
