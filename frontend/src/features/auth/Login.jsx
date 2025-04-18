@@ -22,21 +22,21 @@ export default function Login({ onLogin }) {
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
-    if (!trimmedUsername || !trimmedPassword) {
-      setError('Por favor, complete ambos campos.');
+    if (!trimmedUsername || (!isRegistering && !trimmedPassword)) {
+      setError('Por favor, completa los campos requeridos.');
       setLoading(false);
       return;
     }
 
     if (isRegistering && !isValidEmail(trimmedUsername)) {
-      setError('Por favor, introduce un correo electrónico válido.');
+      setError('Introduce un correo electrónico válido.');
       setLoading(false);
       return;
     }
 
     const endpoint = isRegistering ? '/register' : '/login';
     const payload = isRegistering
-      ? { email: trimmedUsername, password: trimmedPassword }
+      ? { email: trimmedUsername }
       : { username: trimmedUsername, password: trimmedPassword };
 
     try {
@@ -44,12 +44,10 @@ export default function Login({ onLogin }) {
         withCredentials: true,
       });
 
-      if (!response?.data?.success) {
-        throw new Error('Operación fallida.');
-      }
+      if (!response?.data?.success) throw new Error('Operación fallida.');
 
       if (isRegistering) {
-        setInfo('✅ Solicitud enviada. Tu cuenta está pendiente de aprobación.');
+        setInfo('✅ Revisa tu correo para la contraseña generada.');
       } else {
         localStorage.clear();
         sessionStorage.setItem('username', trimmedUsername);
@@ -70,11 +68,7 @@ export default function Login({ onLogin }) {
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="w-full max-w-xl space-y-6 p-6 bg-white rounded-2xl shadow-xl">
         <div className="flex justify-center mb-2">
-          <img
-            src="/logo.png"
-            alt="OG Managements"
-            className="h-[300px] w-auto object-contain"
-          />
+          <img src="/logo.png" alt="OG Managements" className="h-[300px] w-auto object-contain" />
         </div>
 
         <h2 className="text-center text-lg font-semibold text-gray-800 mt-0">
@@ -89,15 +83,20 @@ export default function Login({ onLogin }) {
             onChange={(e) => setUsername(e.target.value)}
             className="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-700"
           />
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-700"
-          />
+
+          {!isRegistering && (
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-700"
+            />
+          )}
+
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           {info && <p className="text-green-600 text-sm text-center">{info}</p>}
+
           <button
             type="submit"
             disabled={loading}
@@ -105,8 +104,9 @@ export default function Login({ onLogin }) {
               loading ? 'bg-gray-400' : 'bg-[#1f1f1f] hover:bg-black'
             }`}
           >
-            {loading ? 'Procesando...' : isRegistering ? 'Crear cuenta' : 'Entrar'}
+            {loading ? 'Procesando...' : isRegistering ? 'Registrarme' : 'Entrar'}
           </button>
+
           <button
             type="button"
             onClick={() => {
