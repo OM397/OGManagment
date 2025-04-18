@@ -15,7 +15,8 @@ services:
       - RAPIDAPI_KEY=${RAPIDAPI_KEY}
       - FINNHUB_API_KEY=${FINNHUB_API_KEY}
       - EXCHANGE_API_KEY=${EXCHANGE_API_KEY}
- 
+      - RESEND_API_KEY=${RESEND_API_KEY}
+
 
 
     depends_on:

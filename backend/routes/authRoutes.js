@@ -3,10 +3,10 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const rateLimiter = require('../middleware/rateLimiter');
-const nodemailer = require('nodemailer');
-const crypto = require('crypto');
+const { sendEmail } = require('../utils/emailService');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -20,56 +20,30 @@ const COOKIE_OPTIONS = {
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-const generatePassword = () => {
-  return crypto.randomBytes(6).toString('base64').slice(0, 10);
-};
+const generatePassword = () => crypto.randomBytes(6).toString('base64').slice(0, 10);
 
-const createTransporter = () =>
-  nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.SMTP_EMAIL,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+async function sendWelcomeEmail(to, password) {
+  const subject = 'Bienvenido a CAP Tracker 🚀';
+  const html = `
+    <p>Tu cuenta ha sido registrada correctamente.</p>
+    <p><strong>Contraseña temporal:</strong> ${password}</p>
+    <p>¡Inicia sesión y cámbiala cuando quieras!</p>
+  `;
+  await sendEmail({ to, subject, html });
+}
 
-const sendWelcomeEmail = async (to, password) => {
-  const transporter = createTransporter();
-
-  const mailOptions = {
-    from: `"CAP Tracker" <${process.env.SMTP_EMAIL}>`,
-    to,
-    subject: 'Bienvenido a CAP Tracker 🚀',
-    text: `Tu cuenta ha sido registrada correctamente.\n\nContraseña temporal: ${password}\n\n¡Inicia sesión y cámbiala cuando quieras!`,
-    html: `
-      <p>Tu cuenta ha sido registrada correctamente.</p>
-      <p><strong>Contraseña temporal:</strong> ${password}</p>
-      <p>¡Inicia sesión y cámbiala cuando quieras!</p>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
-};
-
-const sendAdminNotification = async (newUserEmail) => {
-  const transporter = createTransporter();
-
-  const mailOptions = {
-    from: `"CAP Tracker" <${process.env.SMTP_EMAIL}>`,
-    to: process.env.ADMIN_EMAIL,
-    subject: '📩 Nuevo usuario registrado en CAP Tracker',
-    html: `
-      <h3>Nuevo registro pendiente</h3>
-      <p>El siguiente usuario ha solicitado acceso:</p>
-      <ul>
-        <li><strong>Email:</strong> ${newUserEmail}</li>
-      </ul>
-      <p>Por favor, revisa y aprueba desde el panel de administración.</p>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
-};
+async function sendAdminNotification(newUserEmail) {
+  const subject = '📩 Nuevo usuario registrado en CAP Tracker';
+  const html = `
+    <h3>Nuevo registro pendiente</h3>
+    <p>El siguiente usuario ha solicitado acceso:</p>
+    <ul>
+      <li><strong>Email:</strong> ${newUserEmail}</li>
+    </ul>
+    <p>Por favor, revisa y aprueba desde el panel de administración.</p>
+  `;
+  await sendEmail({ to: process.env.ADMIN_EMAIL, subject, html });
+}
 
 router.post('/register', rateLimiter, async (req, res) => {
   const { email } = req.body;
