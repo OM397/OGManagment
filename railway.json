@@ -1,0 +1,19 @@
+{
+    "build": {
+      "builder": "NIXPACKS",
+      "nixpacksPlan": {
+        "phases": {
+          "install": {
+            "cmds": ["npm install --prefix frontend"]
+          },
+          "build": {
+            "cmds": ["npm run build --prefix frontend"]
+          },
+          "start": {
+            "cmds": ["npx serve -s frontend/dist -l $PORT"]
+          }
+        }
+      }
+    }
+  }
+  
