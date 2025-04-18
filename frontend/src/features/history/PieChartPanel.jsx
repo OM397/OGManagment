@@ -1,6 +1,7 @@
 // 📁 src/features/history/PieChartPanel.jsx
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector, Tooltip } from 'recharts';
 import { useState } from 'react';
+import CustomTooltip from './CustomTooltip';
 
 export default function PieChartPanel({ pieDataInitial, pieDataMarket, totalCurrent, activeIndex }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -18,17 +19,15 @@ export default function PieChartPanel({ pieDataInitial, pieDataMarket, totalCurr
     />
   );
 
-  const getTooltipFormatter = (total) => (value, name) => {
-    const percentage = ((value / total) * 100).toFixed(1);
-    return [`${value.toLocaleString()} EUR`, `${name} (${percentage}%)`];
-  };
-
   return (
     <div className="bg-white p-4 rounded shadow-sm flex flex-col items-center justify-center">
       <div className="relative w-full h-80">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Tooltip formatter={getTooltipFormatter(totalCurrent)} />
+          <Tooltip
+  content={<CustomTooltip />}
+  wrapperStyle={{ zIndex: 50 }} // ⬅️ asegura que esté por encima del label central
+/>
 
             <Pie
               data={pieDataInitial}
