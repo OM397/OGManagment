@@ -20,7 +20,8 @@ const COOKIE_OPTIONS = {
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-const generatePassword = () => crypto.randomBytes(6).toString('base64').slice(0, 10);
+const generatePassword = () =>
+  crypto.randomBytes(6).toString('base64').slice(0, 10);
 
 async function sendWelcomeEmail(to, password) {
   const subject = 'Bienvenido a CAP Tracker 🚀';
@@ -65,7 +66,9 @@ router.post('/register', rateLimiter, async (req, res) => {
     await sendWelcomeEmail(email, password);
     await sendAdminNotification(email);
 
-    const token = jwt.sign({ username: email, role: 'user' }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username: email, role: 'user' }, JWT_SECRET, {
+      expiresIn: '1h',
+    });
 
     res.cookie('token', token, COOKIE_OPTIONS).status(201).json({
       success: true,
@@ -88,12 +91,17 @@ router.post('/login', rateLimiter, async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta.' });
-    if (!user.approved) return res.status(403).json({ error: 'Tu cuenta aún no ha sido aprobada por el administrador.' });
+    if (!user.approved)
+      return res.status(403).json({
+        error: 'Tu cuenta aún no ha sido aprobada por el administrador.',
+      });
 
     user.lastLogin = new Date();
     await user.save();
 
-    const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username, role: user.role }, JWT_SECRET, {
+      expiresIn: '1h',
+    });
 
     res.cookie('token', token, COOKIE_OPTIONS).status(200).json({
       success: true,
