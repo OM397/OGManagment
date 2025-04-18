@@ -12,7 +12,7 @@ const copyRedirects = () => ({
 });
 
 export default defineConfig({
-  base: './', // ✅ clave para rutas relativas en producción
+  base: '/', // <-- esta es la única línea modificada
   plugins: [react(), copyRedirects()],
   server: {
     proxy: {
@@ -32,3 +32,4 @@ export default defineConfig({
     },
   },
 });
+
