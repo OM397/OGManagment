@@ -39,7 +39,7 @@ export default function History() {
     loading: loadingAll,
     convertedInitial: initialAll,
     multiHistory
-  } = useCombinedHistory(userAssets, exchangeRates, true);
+  } = useCombinedHistory(userAssets, exchangeRates);
 
   const history = selectedId === 'ALL' ? combinedHistory : assetHistory;
   const convertedInitial = selectedId === 'ALL' ? initialAll : initialSingle;
@@ -61,6 +61,23 @@ export default function History() {
       color: GRAYS[i % GRAYS.length]
     };
   }).sort((a, b) => b.value - a.value);
+
+  const pieDataTypeMarket = ['crypto', 'stock'].map((type, i) => {
+    const group = type === 'crypto' ? marketData.cryptos : marketData.stocks;
+
+    const total = userAssets
+      .filter(a => a.type === type)
+      .reduce((sum, a) => {
+        const price = group?.[a.id?.toLowerCase()]?.eur ?? 0;
+        return sum + a.initialQty * price;
+      }, 0);
+
+    return {
+      name: type.charAt(0).toUpperCase() + type.slice(1),
+      value: parseFloat(total.toFixed(2)),
+      color: GRAYS[i % GRAYS.length]
+    };
+  });
 
   const totalCurrent = pieDataMarket.reduce((sum, a) => sum + a.value, 0);
   const activeIndex = selectedId === 'ALL' ? -1 : pieDataInitial.findIndex(p => p.name === selected?.name);
@@ -88,6 +105,12 @@ export default function History() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <MultiLineChartPanel multiHistory={multiHistory} />
+        <PieChartPanel
+          pieDataInitial={pieDataTypeMarket}
+          pieDataMarket={pieDataTypeMarket}
+          totalCurrent={pieDataTypeMarket.reduce((s, a) => s + a.value, 0)}
+          activeIndex={-1}
+        />
       </div>
     </div>
   );
