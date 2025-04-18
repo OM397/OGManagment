@@ -21,3 +21,5 @@ Thumbs.db
 node_modules/
 
 
+# Ignore built assets
+frontend/dist
