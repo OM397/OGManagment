@@ -12,7 +12,7 @@ const copyRedirects = () => ({
 });
 
 export default defineConfig({
-  base: '/', // <-- esta es la única línea modificada
+  base: '/', // ✅ necesario para dominios personalizados como capitaltracker.app
   plugins: [react(), copyRedirects()],
   server: {
     proxy: {
@@ -32,4 +32,3 @@ export default defineConfig({
     },
   },
 });
-
