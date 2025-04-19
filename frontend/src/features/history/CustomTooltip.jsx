@@ -1,4 +1,5 @@
 // 📁 src/features/history/CustomTooltip.jsx
+
 export default function CustomTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
 
@@ -19,9 +20,7 @@ export default function CustomTooltip({ active, payload, label }) {
         <>
           <div className="font-semibold">{data.name}</div>
           <div>
-            <span className="text-gray-500">
-              {(data.percent * 100).toFixed(1)}%
-            </span>{' '}
+            <span className="text-gray-500">{(data.percent * 100).toFixed(1)}%</span>{' '}
             — <span className="font-medium">{formatEuro(data.value)}</span>
           </div>
         </>

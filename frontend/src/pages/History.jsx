@@ -76,13 +76,26 @@ export default function History() {
       percent: total ? d.value / total : 0
     }));
 
-  const pieDataInitialWithPercent = addPercent(pieDataInitial, totalCurrent).sort((a, b) => b.value - a.value);
-  const pieDataMarketWithPercent = addPercent(pieDataMarket, totalCurrent).sort((a, b) => b.value - a.value);
+  const pieDataInitialWithPercent = addPercent(pieDataInitial, totalCurrent);
+  const pieDataMarketWithPercent = addPercent(pieDataMarket, totalCurrent);
+
+  // ✅ Sort both initial and market together by initial values
+  const sorted = pieDataInitialWithPercent
+    .map((entry, i) => ({
+      ...entry,
+      marketValue: pieDataMarketWithPercent[i].value
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  const syncedPieDataInitial = sorted.map(({ marketValue, ...initial }) => initial);
+  const syncedPieDataMarket = sorted.map(({ id }) =>
+    pieDataMarketWithPercent.find(d => d.id === id)
+  );
 
   const activeIndex =
     selectedId === 'ALL'
       ? -1
-      : pieDataInitialWithPercent.findIndex(p => p.id === selected?.id);
+      : syncedPieDataInitial.findIndex(p => p.id === selected?.id);
 
   const pieDataTypeMarket = ['crypto', 'stock'].map((type, i) => {
     const group = type === 'crypto' ? marketData.cryptos : marketData.stocks;
@@ -117,10 +130,10 @@ export default function History() {
           lastPoint={lastPoint}
         />
         <PieChartPanel
-          pieDataInitial={pieDataInitialWithPercent}
-          pieDataMarket={pieDataMarketWithPercent}
+          pieDataInitial={syncedPieDataInitial}
+          pieDataMarket={syncedPieDataMarket}
           totalCurrent={totalCurrent}
-          activeIndex={activeIndex}
+          selectedId={selectedId}
           onSelect={setSelectedId}
         />
       </div>
@@ -131,7 +144,7 @@ export default function History() {
           pieDataInitial={pieDataTypeWithPercent}
           pieDataMarket={pieDataTypeWithPercent}
           totalCurrent={totalByType}
-          activeIndex={-1}
+          selectedId={selectedId}
         />
       </div>
     </div>

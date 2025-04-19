@@ -7,8 +7,8 @@ export default function PieChartPanel({
   pieDataInitial,
   pieDataMarket,
   totalCurrent,
-  activeIndex,
-  onSelect
+  onSelect,
+  selectedId
 }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const fadedColor = '#e5e7eb';
@@ -29,14 +29,12 @@ export default function PieChartPanel({
     name: cleanName(entry.name)
   }));
 
+  const activeIndex = selectedId
+    ? dataInitial.findIndex(d => d.id === selectedId)
+    : -1;
+
   const renderActiveShape = ({
-    cx,
-    cy,
-    innerRadius,
-    outerRadius,
-    startAngle,
-    endAngle,
-    fill
+    cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill
   }) => (
     <Sector
       cx={cx}
@@ -74,23 +72,19 @@ export default function PieChartPanel({
               paddingAngle={1}
               isAnimationActive
               animationDuration={300}
-              activeIndex={activeIndex}
+              activeIndex={hoveredIndex ?? activeIndex}
               activeShape={renderActiveShape}
               onClick={handleClick}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              {dataInitial.map((entry, index) => {
-                const isActive =
-                  activeIndex === index || hoveredIndex === index || activeIndex === -1;
-                return (
-                  <Cell
-                    key={`initial-${index}`}
-                    fill={isActive ? entry.color : fadedColor}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    stroke="none"
-                  />
-                );
-              })}
+              {dataInitial.map((entry, index) => (
+                <Cell
+                  key={`initial-${index}`}
+                  fill={(hoveredIndex ?? activeIndex) === index ? entry.color : fadedColor}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  stroke="none"
+                />
+              ))}
             </Pie>
 
             <Pie
@@ -104,23 +98,19 @@ export default function PieChartPanel({
               paddingAngle={1}
               isAnimationActive
               animationDuration={300}
-              activeIndex={activeIndex}
+              activeIndex={hoveredIndex ?? activeIndex}
               activeShape={renderActiveShape}
               onClick={handleClick}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              {dataMarket.map((entry, index) => {
-                const isActive =
-                  activeIndex === index || hoveredIndex === index || activeIndex === -1;
-                return (
-                  <Cell
-                    key={`market-${index}`}
-                    fill={isActive ? entry.color : fadedColor}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    stroke="none"
-                  />
-                );
-              })}
+              {dataMarket.map((entry, index) => (
+                <Cell
+                  key={`market-${index}`}
+                  fill={(hoveredIndex ?? activeIndex) === index ? entry.color : fadedColor}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  stroke="none"
+                />
+              ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
