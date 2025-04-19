@@ -3,14 +3,15 @@
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, ReferenceDot
-} from 'recharts';
-import { AnimatePresence, motion } from 'framer-motion';
-import CustomTooltip from './CustomTooltip';
-import { formatter } from '../../shared/utils';
+} from 'recharts'
+import { AnimatePresence, motion } from 'framer-motion'
+import CustomTooltip from './CustomTooltip'
+import { formatter } from '../../shared/utils'
 
 export default function LineChartPanel({ history, loading, convertedInitial, lastPoint, selectedId }) {
-  const minY = Math.min(...history.map(h => h.value), convertedInitial);
-  const maxY = Math.max(...history.map(h => h.value), convertedInitial);
+  const values = history.map(h => h.value)
+  const minY = Math.min(...values, convertedInitial || Infinity)
+  const maxY = Math.max(...values, convertedInitial || 0)
 
   return (
     <div className="col-span-2 bg-white p-4 rounded shadow-sm">
@@ -32,8 +33,8 @@ export default function LineChartPanel({ history, loading, convertedInitial, las
                   tick={{ fontSize: 10 }}
                   interval="preserveStartEnd"
                   tickFormatter={v => {
-                    const d = new Date(v);
-                    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                    const d = new Date(v)
+                    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`
                   }}
                   axisLine={false}
                   tickLine={false}
@@ -48,7 +49,7 @@ export default function LineChartPanel({ history, loading, convertedInitial, las
                   dot={false}
                   isAnimationActive
                 />
-                {convertedInitial && (
+                {convertedInitial > 0 && (
                   <ReferenceLine
                     y={convertedInitial}
                     stroke="red"
@@ -84,5 +85,5 @@ export default function LineChartPanel({ history, loading, convertedInitial, las
         </motion.div>
       </AnimatePresence>
     </div>
-  );
+  )
 }

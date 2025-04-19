@@ -3,6 +3,11 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 module.exports = function isAdmin(req, res, next) {
+  // ✅ Allow public access to historical GET
+  if (req.method === 'GET' && req.originalUrl.startsWith('/api/history')) {
+    return next();
+  }
+
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Token faltante.' });
 

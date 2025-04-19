@@ -1,5 +1,11 @@
+// 📁 hooks/useMarketHistory.js
 import { useState, useEffect } from 'react';
 import { API_BASE } from '../src/shared/config';
+
+function getCurrencyRate(id, currency, exchangeRates) {
+  const fallbackCurrency = exchangeRates?.[id]?.currency || currency || 'EUR';
+  return fallbackCurrency === 'EUR' ? 1 : exchangeRates?.[fallbackCurrency] || 1;
+}
 
 export default function useMarketHistory(id, type, initialQty = 1, initialCost = 0, exchangeRates = {}) {
   const [history, setHistory] = useState([]);
@@ -29,8 +35,7 @@ export default function useMarketHistory(id, type, initialQty = 1, initialCost =
         const data = await res.json();
         if (!Array.isArray(data?.history)) throw new Error('Invalid data');
 
-        const currency = data.currency || 'EUR';
-        const rate = currency === 'EUR' ? 1 : exchangeRates?.[currency] || 1;
+        const rate = getCurrencyRate(id, data.currency, exchangeRates);
 
         const investmentHistory = data.history.map(entry => ({
           date: entry.date,
@@ -38,14 +43,13 @@ export default function useMarketHistory(id, type, initialQty = 1, initialCost =
         }));
 
         setHistory(investmentHistory);
-        localStorage.setItem(cacheKey, JSON.stringify({ history: data.history, currency, timestamp: Date.now() }));
+        localStorage.setItem(cacheKey, JSON.stringify({ history: data.history, currency: data.currency, timestamp: Date.now() }));
       } catch (err) {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
           console.warn(`⚠️ Cargando histórico desde cache: ${id}`);
           const parsed = JSON.parse(cached);
-          const currency = parsed.currency || 'EUR';
-          const rate = currency === 'EUR' ? 1 : exchangeRates?.[currency] || 1;
+          const rate = getCurrencyRate(id, parsed.currency, exchangeRates);
 
           const fallback = parsed.history.map(entry => ({
             date: entry.date,
@@ -69,11 +73,10 @@ export default function useMarketHistory(id, type, initialQty = 1, initialCost =
   useEffect(() => {
     if (!id || !initialCost || !initialQty) return;
 
-    const key = id.toLowerCase();
-    const currency = exchangeRates?.[key]?.currency || 'EUR';
-    const rate = currency === 'EUR' ? 1 : exchangeRates[currency] || 1;
+    const currency = exchangeRates?.[id]?.currency || 'EUR';
+    const rate = currency === 'EUR' ? 1 : exchangeRates?.[currency] || 1;
 
-    const converted = parseFloat((initialCost * initialQty * rate).toFixed(2));
+    const converted = parseFloat((initialCost * initialQty).toFixed(2));
     setConvertedInitial(converted);
   }, [initialCost, initialQty, exchangeRates, id, type]);
 

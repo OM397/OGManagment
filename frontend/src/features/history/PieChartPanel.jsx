@@ -3,11 +3,41 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Sector, Tooltip } from 'recha
 import { useState } from 'react';
 import CustomTooltip from './CustomTooltip';
 
-export default function PieChartPanel({ pieDataInitial, pieDataMarket, totalCurrent, activeIndex }) {
+export default function PieChartPanel({
+  pieDataInitial,
+  pieDataMarket,
+  totalCurrent,
+  activeIndex,
+  onSelect
+}) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const fadedColor = '#e5e7eb';
 
-  const renderActiveShape = ({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill }) => (
+  const cleanName = (name) =>
+    name
+      .replace(/\s?\([\w.]+\)/, '')
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase());
+
+  const dataInitial = pieDataInitial.map(entry => ({
+    ...entry,
+    name: cleanName(entry.name)
+  }));
+
+  const dataMarket = pieDataMarket.map(entry => ({
+    ...entry,
+    name: cleanName(entry.name)
+  }));
+
+  const renderActiveShape = ({
+    cx,
+    cy,
+    innerRadius,
+    outerRadius,
+    startAngle,
+    endAngle,
+    fill
+  }) => (
     <Sector
       cx={cx}
       cy={cy}
@@ -16,21 +46,25 @@ export default function PieChartPanel({ pieDataInitial, pieDataMarket, totalCurr
       startAngle={startAngle}
       endAngle={endAngle}
       fill={fill}
+      stroke="none"
     />
   );
+
+  const handleClick = (data) => {
+    if (data?.payload?.id && typeof onSelect === 'function') {
+      onSelect(data.payload.id);
+    }
+  };
 
   return (
     <div className="bg-white p-4 rounded shadow-sm flex flex-col items-center justify-center">
       <div className="relative w-full h-80">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-          <Tooltip
-  content={<CustomTooltip />}
-  wrapperStyle={{ zIndex: 50 }} // ⬅️ asegura que esté por encima del label central
-/>
+            <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 50 }} />
 
             <Pie
-              data={pieDataInitial}
+              data={dataInitial}
               dataKey="value"
               nameKey="name"
               cx="50%"
@@ -42,22 +76,25 @@ export default function PieChartPanel({ pieDataInitial, pieDataMarket, totalCurr
               animationDuration={300}
               activeIndex={activeIndex}
               activeShape={renderActiveShape}
+              onClick={handleClick}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              {pieDataInitial.map((entry, index) => {
-                const isActive = activeIndex === index || hoveredIndex === index || activeIndex === -1;
+              {dataInitial.map((entry, index) => {
+                const isActive =
+                  activeIndex === index || hoveredIndex === index || activeIndex === -1;
                 return (
                   <Cell
                     key={`initial-${index}`}
                     fill={isActive ? entry.color : fadedColor}
                     onMouseEnter={() => setHoveredIndex(index)}
+                    stroke="none"
                   />
                 );
               })}
             </Pie>
 
             <Pie
-              data={pieDataMarket}
+              data={dataMarket}
               dataKey="value"
               nameKey="name"
               cx="50%"
@@ -69,15 +106,18 @@ export default function PieChartPanel({ pieDataInitial, pieDataMarket, totalCurr
               animationDuration={300}
               activeIndex={activeIndex}
               activeShape={renderActiveShape}
+              onClick={handleClick}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              {pieDataMarket.map((entry, index) => {
-                const isActive = activeIndex === index || hoveredIndex === index || activeIndex === -1;
+              {dataMarket.map((entry, index) => {
+                const isActive =
+                  activeIndex === index || hoveredIndex === index || activeIndex === -1;
                 return (
                   <Cell
                     key={`market-${index}`}
                     fill={isActive ? entry.color : fadedColor}
                     onMouseEnter={() => setHoveredIndex(index)}
+                    stroke="none"
                   />
                 );
               })}
@@ -87,7 +127,7 @@ export default function PieChartPanel({ pieDataInitial, pieDataMarket, totalCurr
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center text-sm font-medium text-gray-900">
-            € {(totalCurrent / 1000).toFixed(1)}k
+            € {(totalCurrent).toLocaleString('de-DE', { minimumFractionDigits: 0 })}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 // 📁 src/pages/History.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useCategoryGroups } from '../shared/context/CategoryGroupsContext';
 import useMarketData from '../features/assets/useMarketData';
 import useMarketHistory from '../../hooks/useMarketHistory';
@@ -44,27 +44,48 @@ export default function History() {
   const history = selectedId === 'ALL' ? combinedHistory : assetHistory;
   const convertedInitial = selectedId === 'ALL' ? initialAll : initialSingle;
   const loading = selectedId === 'ALL' ? loadingAll : loadingSingle;
-  const lastPoint = history[history.length - 1];
+
+  const lastPoint = useMemo(() => {
+    if (!history?.length) return null;
+    return history[history.length - 1];
+  }, [history]);
 
   const pieDataInitial = userAssets.map((a, i) => ({
+    id: a.id,
     name: a.name,
     value: parseFloat((a.initialQty * a.initialCost).toFixed(2)),
     color: GRAYS[i % GRAYS.length]
-  })).sort((a, b) => b.value - a.value);
+  }));
 
   const pieDataMarket = userAssets.map((a, i) => {
     const group = a.type === 'crypto' ? marketData.cryptos : marketData.stocks;
     const price = group?.[a.id?.toLowerCase()]?.eur ?? 0;
     return {
+      id: a.id,
       name: a.name,
       value: parseFloat((a.initialQty * price).toFixed(2)),
       color: GRAYS[i % GRAYS.length]
     };
-  }).sort((a, b) => b.value - a.value);
+  });
+
+  const totalCurrent = pieDataMarket.reduce((sum, a) => sum + a.value, 0);
+
+  const addPercent = (data, total) =>
+    data.map(d => ({
+      ...d,
+      percent: total ? d.value / total : 0
+    }));
+
+  const pieDataInitialWithPercent = addPercent(pieDataInitial, totalCurrent).sort((a, b) => b.value - a.value);
+  const pieDataMarketWithPercent = addPercent(pieDataMarket, totalCurrent).sort((a, b) => b.value - a.value);
+
+  const activeIndex =
+    selectedId === 'ALL'
+      ? -1
+      : pieDataInitialWithPercent.findIndex(p => p.id === selected?.id);
 
   const pieDataTypeMarket = ['crypto', 'stock'].map((type, i) => {
     const group = type === 'crypto' ? marketData.cryptos : marketData.stocks;
-
     const total = userAssets
       .filter(a => a.type === type)
       .reduce((sum, a) => {
@@ -79,8 +100,8 @@ export default function History() {
     };
   });
 
-  const totalCurrent = pieDataMarket.reduce((sum, a) => sum + a.value, 0);
-  const activeIndex = selectedId === 'ALL' ? -1 : pieDataInitial.findIndex(p => p.name === selected?.name);
+  const totalByType = pieDataTypeMarket.reduce((s, a) => s + a.value, 0);
+  const pieDataTypeWithPercent = addPercent(pieDataTypeMarket, totalByType);
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -96,19 +117,20 @@ export default function History() {
           lastPoint={lastPoint}
         />
         <PieChartPanel
-          pieDataInitial={pieDataInitial}
-          pieDataMarket={pieDataMarket}
+          pieDataInitial={pieDataInitialWithPercent}
+          pieDataMarket={pieDataMarketWithPercent}
           totalCurrent={totalCurrent}
           activeIndex={activeIndex}
+          onSelect={setSelectedId}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <MultiLineChartPanel multiHistory={multiHistory} />
         <PieChartPanel
-          pieDataInitial={pieDataTypeMarket}
-          pieDataMarket={pieDataTypeMarket}
-          totalCurrent={pieDataTypeMarket.reduce((s, a) => s + a.value, 0)}
+          pieDataInitial={pieDataTypeWithPercent}
+          pieDataMarket={pieDataTypeWithPercent}
+          totalCurrent={totalByType}
           activeIndex={-1}
         />
       </div>
