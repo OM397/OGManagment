@@ -37,10 +37,12 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://ogmanagment-production-f730.up.railway.app'
-];
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://ogmanagment-production-f730.up.railway.app',
+    'https://www.capitaltracker.app'
+  ];
+  
 
 app.use(cors({
   origin: (origin, callback) => {
