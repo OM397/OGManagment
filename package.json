@@ -1,7 +1,9 @@
 {
   "dependencies": {
     "@react-spring/web": "^9.7.5",
-    "recharts": "^2.15.2"
+    "axios": "^1.8.4",
+    "recharts": "^2.15.2",
+    "yahoo-finance2": "^2.13.3"
   },
   "devDependencies": {
     "serve": "^14.2.4"

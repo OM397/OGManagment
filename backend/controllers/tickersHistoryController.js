@@ -2,6 +2,7 @@
 const redis = require('../redisClient');
 const twelveData = require('../services/twelveDataService');
 const yahooFinance = require('yahoo-finance2').default;
+const finnhubService = require('../services/finnhubService');
 const axios = require('axios');
 
 exports.getHistoricalData = async (req, res) => {
@@ -16,14 +17,11 @@ exports.getHistoricalData = async (req, res) => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed?.history?.length) {
-          console.log(`⚡ Cache HIT for ${cacheKey}`);
           return res.json(parsed);
         }
-        console.warn(`⚠️ Cache HIT but EMPTY for ${cacheKey}, ignoring...`);
       }
     }
 
-    console.log(`🐢 Cache MISS for ${cacheKey}`);
     let history = [];
     let currency = 'EUR';
 
@@ -53,34 +51,37 @@ exports.getHistoricalData = async (req, res) => {
           price: parseFloat(p.close.toFixed(2))
         }));
       } catch (err) {
-        console.warn(`🛟 TwelveData failed for ${id}, fallback Yahoo`);
+        try {
+          const yahooResult = await yahooFinance.historical(id, {
+            period1: new Date(Date.now() - 30 * 86400000),
+            interval: '1d'
+          });
 
-        const yahooResult = await yahooFinance.historical(id, {
-          period1: new Date(Date.now() - 30 * 86400000),
-          interval: '1d'
-        });
+          history = yahooResult.map(entry => ({
+            date: entry.date.toISOString().split('T')[0],
+            price: parseFloat(entry.close.toFixed(2))
+          }));
 
-        history = yahooResult.map(entry => ({
-          date: entry.date.toISOString().split('T')[0],
-          price: parseFloat(entry.close.toFixed(2))
-        }));
-
-        currency = yahooResult[0]?.currency || 'EUR';
+          currency = yahooResult[0]?.currency || 'EUR';
+        } catch (yfErr) {
+          console.warn(`🛟 Yahoo failed. Trying Finnhub: ${id}`);
+          try {
+            history = await finnhubService.getHistory(id.toUpperCase());
+            currency = 'USD';
+          } catch (finnhubErr) {
+            return res.status(500).json({ error: 'All providers failed.' });
+          }
+        }
       }
     }
 
     const payload = { history, currency };
-
     if (history.length > 0) {
       await redis.set(cacheKey, JSON.stringify(payload), 'EX', 43200);
-      console.log(`📦 Cached ${cacheKey} for 12h`);
-    } else {
-      console.warn(`🚫 Not caching empty result for ${cacheKey}`);
     }
 
     res.json(payload);
   } catch (err) {
-    console.error(`❌ Error histórico (${type}:${id}):`, err.message);
     res.status(500).json({ error: 'Failed to fetch historical data' });
   }
 };
