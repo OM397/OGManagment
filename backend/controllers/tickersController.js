@@ -1,7 +1,8 @@
+const twelveData = require('../services/twelveDataService');
+const yahooFinance = require('yahoo-finance2').default;
 const path = require('path');
 const fs = require('fs');
 const tickersService = require('../services/tickersService');
-const yahooFinance = require('yahoo-finance2').default;
 
 exports.getTickers = (req, res) => {
   try {
@@ -9,7 +10,6 @@ exports.getTickers = (req, res) => {
     const cryptos = fs.existsSync(cryptosPath)
       ? JSON.parse(fs.readFileSync(cryptosPath, 'utf-8'))
       : [];
-
     res.json({ cryptos, stocks: [] });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load tickers' });
@@ -24,21 +24,33 @@ exports.searchStocks = async (req, res) => {
   }
 
   try {
-    console.log('🔍 Buscando acciones con query (Yahoo):', query);
+    console.log('🔍 Buscando acciones con query (TwelveData):', query);
+    let results = await twelveData.searchSymbol(query);
+    let stocks = [];
 
-    const results = await yahooFinance.search(query);
-
-    const stocks = (results?.quotes || [])
-      .filter(item => item.symbol && item.shortname)
-      .map(item => ({
+    if (Array.isArray(results)) {
+      stocks = results.map(item => ({
         symbol: item.symbol,
-        description: item.shortname
+        description: item.description || item.instrument_name || item.symbol
       }));
+    }
+
+    // Fallback: Yahoo
+    if (stocks.length === 0) {
+      console.log('🔁 Fallback: Yahoo Finance');
+      const fallback = await yahooFinance.search(query);
+      stocks = (fallback?.quotes || [])
+        .filter(item => item.symbol && item.shortname)
+        .map(item => ({
+          symbol: item.symbol,
+          description: item.shortname
+        }));
+    }
 
     console.log(`✅ ${stocks.length} resultados procesados.`);
     res.json({ result: stocks });
   } catch (err) {
-    console.error('❌ Error buscando acciones en Yahoo:', err.message);
+    console.error('❌ Error buscando acciones:', err.message);
     res.status(500).json({ error: 'Fallo al buscar acciones.' });
   }
 };

@@ -27,9 +27,9 @@ export function useAssetSearch(assetType, cryptos) {
     } else {
       try {
         const res = await fetch(`/api/search-stocks?q=${encodeURIComponent(value)}`);
+        if (!res.ok) throw new Error(`Search failed with ${res.status}`);
         const data = await res.json();
-
-        const stocks = data.result || []; // ✅ acceder al array correctamente
+        const stocks = data?.result || [];
 
         setFilteredOptions(stocks.map(stock => ({
           label: `${stock.description} (${stock.symbol})`,
@@ -38,6 +38,7 @@ export function useAssetSearch(assetType, cryptos) {
         })));
       } catch (err) {
         console.error('❌ Error searching stocks:', err);
+        setFilteredOptions([]);
       }
     }
   };

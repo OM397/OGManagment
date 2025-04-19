@@ -1,6 +1,6 @@
-const axios = require('axios');
+const twelveData = require('./twelveDataService');
 const yahooFinance = require('yahoo-finance2').default;
-require('dotenv').config();
+const axios = require('axios');
 
 exports.fetchMarketData = async (assets) => {
   const result = { cryptos: {}, stocks: {} };
@@ -14,10 +14,7 @@ exports.fetchMarketData = async (assets) => {
       console.log(`📤 Intentando cripto: ${id}`);
       try {
         const cgRes = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
-          params: {
-            ids: id.toLowerCase(),
-            vs_currencies: 'eur'
-          }
+          params: { ids: id.toLowerCase(), vs_currencies: 'eur' }
         });
         if (cgRes.data[id]) {
           result.cryptos[id.toLowerCase()] = cgRes.data[id];
@@ -26,39 +23,54 @@ exports.fetchMarketData = async (assets) => {
       } catch (err) {
         console.error(`❌ Error buscando cripto ${id}:`, err.message);
       }
-    } else if (type === 'stock') {
-      console.log(`📤 Intentando stock (Yahoo): ${id}`);
+    }
+
+    if (type === 'stock') {
+      console.log(`📤 Intentando stock (TwelveData): ${id}`);
+      let quote;
+      const cleanSymbol = id.toUpperCase().split('.')[0];
+
       try {
-        const quote = await yahooFinance.quote(id.toUpperCase());
-        if (quote?.regularMarketPrice) {
-          let price = quote.regularMarketPrice;
-          let currency = (quote.currency || 'EUR').toUpperCase();
-
-          console.log(`↪️ Precio original: ${price} ${currency}`);
-
-          if (currency === 'GBX') {
-            price = price / 100;
-            currency = 'GBP';
-            console.log(`🔁 Convertido GBX → GBP: ${price} GBP`);
-          }
-
-          // 🔁 Algunos fondos como SGLN.L aún reportan GBP pero en peniques
-          if (currency === 'GBP' && price > 1000) {
-            price = price / 100;
-            console.log(`🔁 Precio ajustado de GBP peniques a libras: ${price}`);
-          }
-
-          currencies.add(currency);
-
-          result.stocks[id.toLowerCase()] = {
-            rawPrice: price,
-            currency
-          };
-        } else {
-          console.warn(`❌ Yahoo no encontró precio para ${id}`);
-        }
+        quote = await twelveData.fetchQuote(cleanSymbol);
       } catch (err) {
-        console.error(`❌ Yahoo error [${id}]:`, err.message);
+        console.error(`❌ TwelveData Quote error [${cleanSymbol}]:`, err.message);
+      }
+
+      if (!quote || !quote.price) {
+        try {
+          const fallback = await yahooFinance.quote(id.toUpperCase());
+          if (fallback?.regularMarketPrice) {
+            quote = {
+              price: fallback.regularMarketPrice,
+              currency: (fallback.currency || 'EUR').toUpperCase()
+            };
+            console.log(`🛟 Yahoo fallback used for: ${id}`);
+          }
+        } catch (fallbackErr) {
+          console.error(`❌ Yahoo fallback failed for ${id}:`, fallbackErr.message);
+        }
+      }
+
+      if (quote?.price) {
+        let price = quote.price;
+        let currency = (quote.currency || 'EUR').toUpperCase();
+
+        if (currency === 'GBX') {
+          price = price / 100;
+          currency = 'GBP';
+          console.log(`🔁 Convertido GBX → GBP: ${price} GBP`);
+        }
+
+        if (currency === 'GBP' && price > 1000) {
+          price = price / 100;
+          console.log(`🔁 Precio ajustado de GBP peniques a libras: ${price}`);
+        }
+
+        currencies.add(currency);
+
+        result.stocks[id.toLowerCase()] = { rawPrice: price, currency };
+      } else {
+        console.warn(`❌ No se encontró precio para ${id}`);
       }
     }
   }
@@ -67,10 +79,7 @@ exports.fetchMarketData = async (assets) => {
     try {
       const symbols = Array.from(currencies).filter(c => c !== 'EUR').join(',');
       const ratesRes = await axios.get('https://api.frankfurter.app/latest', {
-        params: {
-          from: 'EUR',
-          to: symbols
-        }
+        params: { from: 'EUR', to: symbols }
       });
       Object.assign(exchangeRates, ratesRes.data?.rates);
       console.log('💱 Tasas de cambio obtenidas:', exchangeRates);
@@ -98,6 +107,5 @@ exports.fetchMarketData = async (assets) => {
   }
 
   console.table(debugTable);
-
   return result;
 };
