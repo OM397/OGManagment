@@ -5,8 +5,10 @@ backend/node_modules/
 
 # 🔐 Secrets
 .env
-.env.*          # Catches .env.production, .env.local, etc.
+.env.*
 *.env
+*.env.*
+
 
 # 🧪 Test files
 test*.js
