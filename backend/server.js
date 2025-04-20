@@ -7,7 +7,8 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-require('./redisClient'); // ⬅️ Ensures Redis client connects on server start
+// ✅ Robust require for Redis client (resolves correctly in prod)
+require(path.join(__dirname, 'redisClient'));
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,11 +19,9 @@ if (!JWT_SECRET || !MONGODB_URI) {
   throw new Error("❌ Faltan JWT_SECRET o MONGODB_URI en .env");
 }
 
-// 📌 Ruta base dinámica (local vs producción)
 const baseDir = __dirname.includes('backend') ? './routes' : './backend/routes';
 const middlewareBase = __dirname.includes('backend') ? './middleware' : './backend/middleware';
 
-// ✅ Importa rutas y middleware
 const tickersRoutes = require(path.join(__dirname, baseDir, 'tickersRoutes.js'));
 const authRoutes = require(path.join(__dirname, baseDir, 'authRoutes.js'));
 const adminRoutes = require(path.join(__dirname, baseDir, 'adminRoutes.js'));
@@ -65,14 +64,12 @@ const authLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta más tarde.' }
 });
 
-// ✅ Rutas API
 app.use('/api', tickersRoutes);
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api', adminRoutes);
-app.use('/api', tickersHistoryRoutes); // 👈 Nueva ruta añadida
+app.use('/api', tickersHistoryRoutes);
 
-// ✅ SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
