@@ -80,7 +80,13 @@ export default function PieChartPanel({
               {dataInitial.map((entry, index) => (
                 <Cell
                   key={`initial-${index}`}
-                  fill={(hoveredIndex ?? activeIndex) === index ? entry.color : fadedColor}
+                  fill={
+                    hoveredIndex === null && activeIndex === -1
+                      ? entry.color
+                      : (hoveredIndex ?? activeIndex) === index
+                        ? entry.color
+                        : fadedColor
+                  }
                   onMouseEnter={() => setHoveredIndex(index)}
                   stroke="none"
                 />
@@ -106,7 +112,13 @@ export default function PieChartPanel({
               {dataMarket.map((entry, index) => (
                 <Cell
                   key={`market-${index}`}
-                  fill={(hoveredIndex ?? activeIndex) === index ? entry.color : fadedColor}
+                  fill={
+                    hoveredIndex === null && activeIndex === -1
+                      ? entry.color
+                      : (hoveredIndex ?? activeIndex) === index
+                        ? entry.color
+                        : fadedColor
+                  }
                   onMouseEnter={() => setHoveredIndex(index)}
                   stroke="none"
                 />

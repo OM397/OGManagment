@@ -8,26 +8,43 @@ import { GRAYS } from './constants';
 import CustomTooltip from './CustomTooltip';
 
 export default function MultiLineChartPanel({ multiHistory }) {
-  const dates = multiHistory.length ? multiHistory[0].history.map(p => p.date) : [];
+  const truncateToCommonStart = (multiHistory) => {
+    if (!multiHistory.length) return [];
+
+    const minLength = Math.min(...multiHistory.map(asset => asset.history.length));
+    let firstValidIndex = 0;
+
+    // Find the first index where all assets have defined values
+    for (let i = 0; i < minLength; i++) {
+      const allHaveData = multiHistory.every(asset => asset.history[i]?.value != null);
+      if (allHaveData) {
+        firstValidIndex = i;
+        break;
+      }
+    }
+
+    return multiHistory.map(asset => ({
+      ...asset,
+      history: asset.history.slice(firstValidIndex)
+    }));
+  };
+
+  const syncedHistory = truncateToCommonStart(multiHistory);
+  const dates = syncedHistory.length ? syncedHistory[0].history.map(p => p.date) : [];
 
   const chartData = dates.map((date, i) => {
-    const point = { date };
-    multiHistory.forEach(({ id, history }) => {
-      point[id] = history[i].value;
+    const row = { date };
+    syncedHistory.forEach(({ id, history }) => {
+      row[id] = history[i]?.value;
     });
-    return point;
+    return row;
   });
 
   const cleanName = (name) =>
-    name
-      .replace(/\s?\([\w.]+\)/, '')
-      .toLowerCase()
-      .replace(/\b\w/g, c => c.toUpperCase());
+    name.replace(/\s?\([\w.]+\)/, '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
+  const euroFormat = (value) => '€ ' + Math.round(value).toLocaleString('de-DE');
   const usableColors = GRAYS.filter((_, i) => i > 1);
-
-  const euroFormat = (value) =>
-    '€ ' + Math.round(value).toLocaleString('de-DE'); // ✅ de-DE uses dot for thousands
 
   const renderSortedTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -60,9 +77,11 @@ export default function MultiLineChartPanel({ multiHistory }) {
             <XAxis
               dataKey="date"
               tick={{ fontSize: 10 }}
-              tickFormatter={v => {
+              tickFormatter={(v) => {
                 const d = new Date(v);
-                return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
+                  .toString()
+                  .padStart(2, '0')}`;
               }}
               axisLine={false}
               tickLine={false}
@@ -70,12 +89,12 @@ export default function MultiLineChartPanel({ multiHistory }) {
             <YAxis hide />
             <Tooltip content={renderSortedTooltip} />
 
-            {multiHistory.map((asset, index) => (
+            {syncedHistory.map((asset, i) => (
               <Line
                 key={asset.id}
                 type="monotone"
                 dataKey={asset.id}
-                stroke={usableColors[index % usableColors.length]}
+                stroke={usableColors[i % usableColors.length]}
                 strokeWidth={2}
                 dot={false}
                 name={cleanName(asset.name)}
