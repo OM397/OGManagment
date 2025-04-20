@@ -15,8 +15,7 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
   useEffect(() => {
     fetch(`${API_BASE}/tickers`)
       .then(res => res.json())
-      .then(data => setTickersData(data))
-  //    .catch(err => console.error('❌ Error loading tickers', err));
+      .then(data => setTickersData(data));
   }, []);
 
   useEffect(() => {
@@ -66,19 +65,15 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
           return !group?.[id];
         });
 
+        setMarketData(data);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+
         if (missing) {
-          console.warn('⚠️ Datos incompletos. Usando marketData del caché.');
-          const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
-          if (cached) {
-            setMarketData(JSON.parse(cached));
-            setError('No se pudieron obtener algunos precios. Se muestran datos anteriores.');
-          }
-        } else {
-          setMarketData(data);
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+          console.warn('⚠️ Algunos tickers no tienen datos. Se muestran los restantes.');
+          setError('Algunos precios no están disponibles. Datos parciales mostrados.');
         }
+
       } catch (err) {
-  //      console.error('❌ Error al obtener market data:', err.message);
         const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (cached) {
           setMarketData(JSON.parse(cached));
