@@ -7,6 +7,8 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+require('./redisClient'); // ⬅️ Ensures Redis client connects on server start
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -37,12 +39,11 @@ mongoose.connect(MONGODB_URI, {
     process.exit(1);
   });
 
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'https://ogmanagment-production-f730.up.railway.app',
-    'https://www.capitaltracker.app'
-  ];
-  
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://ogmanagment-production-f730.up.railway.app',
+  'https://www.capitaltracker.app'
+];
 
 app.use(cors({
   origin: (origin, callback) => {
