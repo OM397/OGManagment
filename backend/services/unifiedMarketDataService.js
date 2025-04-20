@@ -1,4 +1,4 @@
-// 📁 services/marketDataService.js
+// 📁 services/unifiedMarketDataService.js
 
 const yahooFinance = require('yahoo-finance2').default;
 const twelveData = require('./twelveDataService');

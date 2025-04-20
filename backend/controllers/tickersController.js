@@ -69,6 +69,7 @@ exports.getMarketData = async (req, res) => {
     console.log('✅ Market data response:', result);
     res.json(result);
   } catch (err) {
+    console.log('🔍 FINAL MARKET DATA RESPONSE:', JSON.stringify(result, null, 2));
     console.error("❌ Error fetching market data:", err.message);
     res.status(500).json({ error: 'Failed to fetch market data' });
   }
