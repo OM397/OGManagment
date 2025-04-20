@@ -84,7 +84,8 @@ export default function useCombinedHistory(assets = [], exchangeRates = {}) {
       let sortedDates = Array.from(allDates).sort();
 
       const startDates = all.map(asset => asset.history[0]?.date).filter(Boolean);
-      const minStart = startDates.length ? startDates.sort().reverse()[0] : null;
+      const minStart = startDates.length ? startDates.sort()[startDates.length - 1] : null;
+
       if (minStart) {
         sortedDates = sortedDates.filter(d => d >= minStart);
       }
