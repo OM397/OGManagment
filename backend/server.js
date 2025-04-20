@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-require('./redisClient');
+require(path.resolve(__dirname, 'redisClient'));
 
 
 
