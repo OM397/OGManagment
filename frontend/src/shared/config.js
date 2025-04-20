@@ -2,5 +2,8 @@
 
 export const CATEGORIES = ['Investments', 'Real Estate', 'Others'];
 
-export const API_BASE = import.meta.env.VITE_API_BASE;
+export const API_BASE = typeof __API_BASE__ !== 'undefined'
+  ? __API_BASE__
+  : 'http://localhost:3001/api'; // fallback local
 
+console.log("🔧 API_BASE =", API_BASE); // (opcional para debug)
