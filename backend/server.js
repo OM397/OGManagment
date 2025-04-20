@@ -8,7 +8,8 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // ✅ Robust require for Redis client (resolves correctly in prod)
-require(path.join(__dirname, 'redisClient'));
+require('./redisClient');
+
 
 const app = express();
 const PORT = process.env.PORT || 3001;
