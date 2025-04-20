@@ -17,10 +17,10 @@
     COPY backend/package*.json ./
     RUN npm install
     
-    COPY backend ./backend
-    COPY backend/server.js ./
+    # ✅ Correctly copy backend flat
+    COPY backend/ ./
     
-    # ✅ Copia frontend compilado entero
+    # ✅ Copy frontend build
     COPY --from=frontend-builder /frontend/dist ./public
     
     EXPOSE 3000
