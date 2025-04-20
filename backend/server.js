@@ -6,8 +6,6 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-
-// ✅ Robust require for Redis client (resolves correctly in prod)
 require('./redisClient');
 
 
