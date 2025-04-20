@@ -4,6 +4,30 @@ const yahooFinance = require('yahoo-finance2').default;
 const finnhubService = require('../services/finnhubService');
 const axios = require('axios');
 
+function getLastNDates(days) {
+  const dates = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
+}
+
+function normalizeHistory(history, fullDateRange) {
+  const map = Object.fromEntries(history.map(p => [p.date, p.price]));
+  const result = [];
+  let last = null;
+  for (const date of fullDateRange) {
+    if (map[date] != null) last = map[date];
+    if (last != null) {
+      result.push({ date, price: last });
+    }
+  }
+  return result;
+}
+
 exports.getHistoricalData = async (req, res) => {
   const { id, type, bypass } = req.query;
   console.log("📥 Incoming request:", { id, type, bypass });
@@ -11,6 +35,7 @@ exports.getHistoricalData = async (req, res) => {
   if (!id || !type) return res.status(400).json({ error: 'Missing id or type' });
 
   const cacheKey = `history:${type}:${id}`;
+  const fullDateRange = getLastNDates(30);
 
   try {
     if (bypass !== 'true') {
@@ -29,11 +54,11 @@ exports.getHistoricalData = async (req, res) => {
     let currency = 'EUR';
 
     if (type === 'crypto') {
-      const coingeckoURL = `https://api.coingecko.com/api/v3/coins/${id}/market_chart`;
-      console.log("🔗 Using CoinGecko:", coingeckoURL);
+      const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart`;
+      console.log("🔗 Using CoinGecko:", url);
 
       try {
-        const { data } = await axios.get(coingeckoURL, {
+        const { data } = await axios.get(url, {
           params: { vs_currency: 'eur', days: 30, interval: 'daily' }
         });
 
@@ -46,10 +71,7 @@ exports.getHistoricalData = async (req, res) => {
         console.log("✅ CoinGecko returned:", history.length);
       } catch (err) {
         if (err.response) {
-          console.error("❌ CoinGecko API Error:", {
-            status: err.response.status,
-            data: err.response.data
-          });
+          console.error("❌ CoinGecko API Error:", { status: err.response.status, data: err.response.data });
         } else {
           console.error("❌ CoinGecko Error:", err.message);
         }
@@ -76,10 +98,7 @@ exports.getHistoricalData = async (req, res) => {
         console.log("✅ TwelveData returned:", history.length);
       } catch (err) {
         if (err.response) {
-          console.warn("❌ TwelveData API Error:", {
-            status: err.response.status,
-            data: err.response.data
-          });
+          console.warn("❌ TwelveData API Error:", { status: err.response.status, data: err.response.data });
         } else {
           console.warn("❌ TwelveData Error:", err.message);
         }
@@ -108,10 +127,7 @@ exports.getHistoricalData = async (req, res) => {
             console.log("✅ Finnhub returned:", history.length);
           } catch (finnhubErr) {
             if (finnhubErr.response) {
-              console.error("❌ Finnhub API Error:", {
-                status: finnhubErr.response.status,
-                data: finnhubErr.response.data
-              });
+              console.error("❌ Finnhub API Error:", { status: finnhubErr.response.status, data: finnhubErr.response.data });
             } else {
               console.error("❌ Finnhub Error:", finnhubErr.message);
             }
@@ -122,9 +138,11 @@ exports.getHistoricalData = async (req, res) => {
       }
     }
 
-    const payload = { history, currency };
-    if (history.length > 0) {
-      console.log("💾 Caching response to Redis:", cacheKey);
+    const normalizedHistory = normalizeHistory(history, fullDateRange);
+    const payload = { history: normalizedHistory, currency };
+
+    if (normalizedHistory.length > 0) {
+      console.log("💾 Caching normalized response to Redis:", cacheKey);
       await redis.set(cacheKey, JSON.stringify(payload), 'EX', 43200);
     }
 
