@@ -20,8 +20,9 @@ if (!JWT_SECRET || !MONGODB_URI) {
   throw new Error("❌ Faltan JWT_SECRET o MONGODB_URI en .env");
 }
 
-const baseDir = __dirname.includes('backend') ? './routes' : './backend/routes';
-const middlewareBase = __dirname.includes('backend') ? './middleware' : './backend/middleware';
+const baseDir = './routes';           // ✅ Always from root of /app
+const middlewareBase = './middleware';
+
 
 const tickersRoutes = require(path.join(__dirname, baseDir, 'tickersRoutes.js'));
 const authRoutes = require(path.join(__dirname, baseDir, 'authRoutes.js'));
