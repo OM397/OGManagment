@@ -1,8 +1,10 @@
-const twelveData = require('../services/twelveDataService');
+// 📁 backend/controllers/tickersController.js
+
+const marketData = require('../services/unifiedMarketDataService');
 const yahooFinance = require('yahoo-finance2').default;
-const path = require('path');
+const twelveData = require('../services/twelveDataService');
 const fs = require('fs');
-const tickersService = require('../services/tickersService');
+const path = require('path');
 
 exports.getTickers = (req, res) => {
   try {
@@ -12,6 +14,7 @@ exports.getTickers = (req, res) => {
       : [];
     res.json({ cryptos, stocks: [] });
   } catch (err) {
+    console.error('❌ Error loading tickers:', err.message);
     res.status(500).json({ error: 'Failed to load tickers' });
   }
 };
@@ -19,25 +22,23 @@ exports.getTickers = (req, res) => {
 exports.searchStocks = async (req, res) => {
   const query = req.query.q;
   if (!query || query.length < 2) {
-    console.log('⚠️ Consulta demasiado corta:', query);
-    return res.status(400).json({ error: 'Consulta muy corta.' });
+    return res.status(400).json({ error: 'Query too short' });
   }
 
   try {
-    console.log('🔍 Buscando acciones con query (TwelveData):', query);
-    let results = await twelveData.searchSymbol(query);
+    console.log('🔍 Searching stocks for:', query);
     let stocks = [];
 
-    if (Array.isArray(results)) {
-      stocks = results.map(item => ({
+    const tdResults = await twelveData.searchSymbol(query);
+    if (Array.isArray(tdResults)) {
+      stocks = tdResults.map(item => ({
         symbol: item.symbol,
         description: item.description || item.instrument_name || item.symbol
       }));
     }
 
-    // Fallback: Yahoo
     if (stocks.length === 0) {
-      console.log('🔁 Fallback: Yahoo Finance');
+      console.log('🔁 Falling back to Yahoo Finance search');
       const fallback = await yahooFinance.search(query);
       stocks = (fallback?.quotes || [])
         .filter(item => item.symbol && item.shortname)
@@ -47,30 +48,28 @@ exports.searchStocks = async (req, res) => {
         }));
     }
 
-    console.log(`✅ ${stocks.length} resultados procesados.`);
+    console.log(`✅ Found ${stocks.length} result(s)`);
     res.json({ result: stocks });
   } catch (err) {
-    console.error('❌ Error buscando acciones:', err.message);
-    res.status(500).json({ error: 'Fallo al buscar acciones.' });
+    console.error('❌ Stock search error:', err.message);
+    res.status(500).json({ error: 'Stock search failed' });
   }
 };
 
 exports.getMarketData = async (req, res) => {
   const tickers = req.body;
 
-  if (
-    !Array.isArray(tickers) ||
-    !tickers.every(t => typeof t === 'object' && t.id && t.type)
-  ) {
-    console.log('⚠️ Market data error: formato inválido', tickers);
-    return res.status(400).json({ error: 'Formato de entrada inválido. Esperado: [{ id, type }]' });
+  if (!Array.isArray(tickers) || !tickers.every(t => t.id && t.type)) {
+    return res.status(400).json({ error: 'Invalid input format' });
   }
 
   try {
-    const result = await tickersService.fetchMarketData(tickers);
+    console.log('📥 Market data request received:', tickers);
+    const result = await marketData.getCurrentQuotes(tickers);
+    console.log('✅ Market data response:', result);
     res.json(result);
   } catch (err) {
-    console.error("❌ Error al obtener market data:", err.message);
-    res.status(500).json({ error: 'Error al obtener datos de mercado' });
+    console.error("❌ Error fetching market data:", err.message);
+    res.status(500).json({ error: 'Failed to fetch market data' });
   }
 };

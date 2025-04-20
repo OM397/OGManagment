@@ -42,7 +42,7 @@ const fetchQuote = async (symbol) => {
       throw new Error(data.message || 'Quote fetch failed');
     }
   } catch (err) {
-    console.error(`❌ TwelveData Quote error [${symbol}]:`, err.message);
+ //   console.error(`❌ TwelveData Quote error [${symbol}]:`, err.message);
     return cacheRead(`quote_${symbol}`);
   }
 };
@@ -70,7 +70,7 @@ const fetchTimeSeries = async (symbol, interval = '1day', outputsize = 30) => {
       throw new Error(data.message || 'Time Series fetch failed');
     }
   } catch (err) {
-    console.error(`❌ TwelveData History error [${symbol}]:`, err.message);
+ //   console.error(`❌ TwelveData History error [${symbol}]:`, err.message);
     return cacheRead(`history_${symbol}`);
   }
 };
@@ -93,7 +93,7 @@ const searchSymbol = async (query) => {
       return [];
     }
   } catch (err) {
-    console.error(`❌ TwelveData Search error [${query}]:`, err.message);
+   // console.error(`❌ TwelveData Search error [${query}]:`, err.message);
     return [];
   }
 };

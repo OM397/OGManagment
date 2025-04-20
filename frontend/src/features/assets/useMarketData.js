@@ -16,7 +16,7 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
     fetch(`${API_BASE}/tickers`)
       .then(res => res.json())
       .then(data => setTickersData(data))
-      .catch(err => console.error('❌ Error loading tickers', err));
+  //    .catch(err => console.error('❌ Error loading tickers', err));
   }, []);
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0) {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
         }
       } catch (err) {
-        console.error('❌ Error al obtener market data:', err.message);
+  //      console.error('❌ Error al obtener market data:', err.message);
         const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (cached) {
           setMarketData(JSON.parse(cached));
