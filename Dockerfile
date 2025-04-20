@@ -24,7 +24,9 @@
     # Copiamos build del frontend al public del backend
     COPY --from=frontend-builder /frontend/dist ./public
     
-    EXPOSE 3000
+#EXPOSE 3000
+    EXPOSE 8080
+
     
     CMD ["node", "server.js"]
     
