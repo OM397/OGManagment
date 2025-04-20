@@ -17,13 +17,14 @@ export default function AssetCard({
   const [isOpen, setIsOpen] = useState(false);
   const [editCost, setEditCost] = useState(asset.initialCost);
   const [editQty, setEditQty] = useState(asset.initialQty);
+  const [editDate, setEditDate] = useState(asset.initialDate || '');
   const [editActual, setEditActual] = useState(asset.manualValue ?? asset.actualCost ?? 0);
   const [editMode, setEditMode] = useState(false);
   const [highlight, setHighlight] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
   const { setCategoryGroups } = useCategoryGroups();
 
-  const { name, id, initialQty, initialCost, type: assetType, manualValue } = asset;
+  const { name, id, initialQty, initialCost, type: assetType, manualValue, initialDate } = asset;
 
   const type = assetType || (
     marketData?.cryptos?.[id?.toLowerCase()] ? 'crypto' :
@@ -78,13 +79,12 @@ export default function AssetCard({
     setCategoryGroups(prev => {
       const updated = { ...prev };
       const asset = updated[activeTab][groupName][assetIndex];
-
       asset.initialCost = parsedCost;
       asset.initialQty = parsedQty;
+      asset.initialDate = editDate;
       if (type === 'manual') {
         asset.manualValue = parsedActual;
       }
-
       return updated;
     });
 
@@ -166,70 +166,91 @@ export default function AssetCard({
       </div>
 
       {isOpen && (
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-sm text-gray-600">
-          <div>
-            <div className="text-gray-400">Initial Cost</div>
-            {editMode ? (
-              <input
-                type="number"
-                value={editCost}
-                onChange={(e) => setEditCost(e.target.value)}
-                className="w-full border-b border-gray-300 focus:outline-none"
-              />
-            ) : (
-              <div>{formatter.format(initialCost.toFixed(2))}</div>
-            )}
-          </div>
-          <div>
-            <div className="text-gray-400">Initial Qty</div>
-            {editMode ? (
-              <input
-                type="number"
-                value={editQty}
-                onChange={(e) => setEditQty(e.target.value)}
-                className="w-full border-b border-gray-300 focus:outline-none"
-              />
-            ) : (
+        <>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-sm text-gray-600">
+            <div>
+              <div className="text-gray-400">Initial Cost</div>
+              {editMode ? (
+                <input
+                  type="number"
+                  value={editCost}
+                  onChange={(e) => setEditCost(e.target.value)}
+                  className="w-full border-b border-gray-300 focus:outline-none"
+                />
+              ) : (
+                <div>{formatter.format(initialCost.toFixed(2))}</div>
+              )}
+            </div>
+
+            <div>
+              <div className="text-gray-400">Initial Qty</div>
+              {editMode ? (
+                <input
+                  type="number"
+                  value={editQty}
+                  onChange={(e) => setEditQty(e.target.value)}
+                  className="w-full border-b border-gray-300 focus:outline-none"
+                />
+              ) : (
+                <div>{initialQty}</div>
+              )}
+            </div>
+
+            <div>
+              <div className="text-gray-400">Initial Value</div>
+              <div>{formatter.format(initialValue)}</div>
+            </div>
+
+            <div>
+              <div className="text-gray-400">Actual Cost</div>
+              {editMode && type === 'manual' ? (
+                <input
+                  type="number"
+                  value={editActual}
+                  onChange={(e) => setEditActual(e.target.value)}
+                  className="w-full border-b border-gray-300 focus:outline-none"
+                />
+              ) : (
+                <div className="group relative w-fit">
+                  <span>{formatter.format(actualPrice.toFixed(2))}</span>
+                  {type === 'stock' && wasConverted && (
+                    <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow z-10">
+                      Convertido desde {stockCurrency}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="text-gray-400">Actual Qty</div>
               <div>{initialQty}</div>
-            )}
-          </div>
-          <div>
-            <div className="text-gray-400">Initial Value</div>
-            <div>{formatter.format(initialValue)}</div>
+            </div>
+
+            <div>
+              <div className="text-gray-400">Actual Value</div>
+              <div>{formatter.format(actualValue)}</div>
+            </div>
           </div>
 
-          <div>
-            <div className="text-gray-400">Actual Cost</div>
-            {editMode && type === 'manual' ? (
-              <input
-                type="number"
-                value={editActual}
-                onChange={(e) => setEditActual(e.target.value)}
-                className="w-full border-b border-gray-300 focus:outline-none"
-              />
-            ) : (
-              <div className="group relative w-fit">
-                <span>{formatter.format(actualPrice.toFixed(2))}</span>
-                {type === 'stock' && wasConverted && (
-                  <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow z-10">
-                    Convertido desde {stockCurrency}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="text-gray-400">Actual Qty</div>
-            <div>{initialQty}</div>
-          </div>
-          <div>
-            <div className="text-gray-400">Actual Value</div>
-            <div>{formatter.format(actualValue)}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-sm text-gray-600 mt-4">
+            <div>
+              <div className="text-gray-400">Initial Date</div>
+              {editMode ? (
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full border-b border-gray-300 focus:outline-none"
+                />
+              ) : (
+                <div>{initialDate || '-'}</div>
+              )}
+            </div>
           </div>
 
           {editMode && (
-            <div className="col-span-full flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={() => setEditMode(false)}
                 className="px-4 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
@@ -244,7 +265,7 @@ export default function AssetCard({
               </button>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

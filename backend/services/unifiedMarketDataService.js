@@ -1,4 +1,4 @@
-// 📁 services/unifiedMarketDataService.js
+// 📁 services/marketDataService.js
 
 const yahooFinance = require('yahoo-finance2').default;
 const twelveData = require('./twelveDataService');
@@ -151,6 +151,7 @@ async function fetchHistory(id, type) {
   return result;
 }
 
+
 async function getCurrentQuotes(tickers) {
   console.log('📥 Market data request received:', tickers);
   const result = { cryptos: {}, stocks: {} };
@@ -160,18 +161,42 @@ async function getCurrentQuotes(tickers) {
     if (!id || !type) continue;
 
     if (type === 'crypto') {
+      let cryptoPrice = null;
+
+      // 1️⃣ Try CoinGecko
       try {
         const cgRes = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
           params: { ids: id.toLowerCase(), vs_currencies: 'eur' }
         });
 
         if (cgRes.data[id]) {
-          console.log(`✅ Crypto price from CoinGecko: ${id} = €${cgRes.data[id].eur}`);
-          result.cryptos[id.toLowerCase()] = cgRes.data[id];
+          cryptoPrice = { eur: cgRes.data[id].eur };
+          console.log(`✅ Crypto price from CoinGecko: ${id} = €${cryptoPrice.eur}`);
         }
       } catch (err) {
         console.error(`❌ CoinGecko error for ${id}:`, err.message);
       }
+
+      // 2️⃣ Fallback to Yahoo Finance
+      if (!cryptoPrice) {
+        try {
+          const yf = await yahooFinance.quote(`${id}-EUR`);
+          if (yf?.regularMarketPrice) {
+            cryptoPrice = { eur: yf.regularMarketPrice };
+            console.log(`✅ Crypto price from Yahoo: ${id} = €${cryptoPrice.eur}`);
+          }
+        } catch (err) {
+          console.error(`❌ Yahoo fallback failed for crypto ${id}:`, err.message);
+        }
+      }
+
+      if (cryptoPrice) {
+        result.cryptos[id.toLowerCase()] = cryptoPrice;
+      } else {
+        console.warn(`🚫 No price found for crypto: ${id}`);
+      }
+
+      continue;
     }
 
     if (type === 'stock') {
@@ -207,6 +232,7 @@ async function getCurrentQuotes(tickers) {
 
   return result;
 }
+
 
 module.exports = {
   fetchPrice,

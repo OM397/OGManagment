@@ -1,8 +1,9 @@
 // 📁 frontend/src/shared/Sidebar.jsx
 import React from 'react';
-import { formatter } from './utils';
 import { BarChart2, Gem } from 'lucide-react';
 import { calculateTotals } from './calculateAssetTotals';
+import AnimatedNumber from './AnimatedNumber'; // ✅ import animation
+import { formatter } from './utils';
 
 export default function Sidebar({ selected, setSelected, categoryGroups = {}, marketData = {} }) {
   const navItems = [
@@ -27,6 +28,7 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
         <nav className="px-3 space-y-1">
           {navItems.map(({ name, label, icon }) => {
             const isActive = selected === name;
+            const animatedValue = name === 'Net Worth' ? investmentsValue : allAssetsValue;
 
             return (
               <button
@@ -49,7 +51,7 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
                 </div>
 
                 <span className="text-sm text-gray-500 font-normal">
-                  {formatter.format(name === 'Net Worth' ? investmentsValue : allAssetsValue)}
+                  <AnimatedNumber value={animatedValue} /> {/* ✅ animate here */}
                 </span>
               </button>
             );

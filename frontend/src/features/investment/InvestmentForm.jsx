@@ -1,5 +1,3 @@
-// 📁 frontend/src/features/assets/InvestmentForm.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
 import AssetSearchInput from './AssetSearchInput';
@@ -15,7 +13,8 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
     quantity: '',
     cost: '',
     actualCost: '',
-    group: ''
+    group: '',
+    initialDate: ''
   });
 
   const [cryptos, setCryptos] = useState([]);
@@ -40,7 +39,7 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
   }, [activeTab, assetType]);
 
   const handleAdd = () => {
-    const { name, id, quantity, cost, actualCost, group } = formData;
+    const { name, id, quantity, cost, actualCost, group, initialDate } = formData;
 
     if (!name || !quantity || !cost || !group) {
       alert('All fields are required.');
@@ -71,6 +70,10 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
         : 'manual'
     };
 
+    if (initialDate && activeTab === 'Investments') {
+      newAsset.initialDate = initialDate;
+    }
+
     if (activeTab !== 'Investments') {
       newAsset.manualValue = actual;
     }
@@ -88,7 +91,16 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
       setLastAddedAssetId(newAsset.id);
     }
 
-    setFormData({ name: '', id: '', quantity: '', cost: '', actualCost: '', group: '' });
+    setFormData({
+      name: '',
+      id: '',
+      quantity: '',
+      cost: '',
+      actualCost: '',
+      group: '',
+      initialDate: ''
+    });
+
     if (!showInline) onClose();
   };
 
@@ -136,6 +148,18 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
         setFormData={setFormData}
         categoryGroups={categoryGroups}
       />
+
+      {activeTab === 'Investments' && (
+        <div className="mb-2">
+          <label className="block text-sm text-gray-600 mb-1">Initial Date (optional)</label>
+          <input
+            type="date"
+            className="border px-2 py-1 w-full rounded"
+            value={formData.initialDate}
+            onChange={e => setFormData({ ...formData, initialDate: e.target.value })}
+          />
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-2 justify-end mt-4">
         <button
