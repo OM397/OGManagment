@@ -155,7 +155,7 @@ export default function Portfolio({ initialData, exchangeRates, reloadMarketData
         <div className="flex gap-4 border-b border-gray-200 text-sm font-medium min-w-[500px]">
           {CATEGORIES.map(cat => {
             const isActive = activeTab === cat;
-            const { totalActual: total } = calculateTotals(categoryGroups, marketData, cat === 'Investments');
+            const { totalActual: total } = calculateTotals(categoryGroups, marketData, cat);
 
             const totalDisplay = total > 0 ? formatter.format(total) : '€€€€';
 
