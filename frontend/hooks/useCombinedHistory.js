@@ -7,6 +7,15 @@ function getCurrencyRate(id, currency, exchangeRates) {
   return fallbackCurrency === 'EUR' ? 1 : exchangeRates?.[fallbackCurrency] || 1;
 }
 
+function normalizeCryptoId(id, type) {
+  if (type !== 'crypto') return id;
+  const map = {
+    bitcoin: 'BTC',
+    ethereum: 'ETH'
+  };
+  return map[id.toLowerCase()] || id.toUpperCase();
+}
+
 export default function useCombinedHistory(assets = [], exchangeRates = {}) {
   const [combinedHistory, setCombinedHistory] = useState([]);
   const [convertedInitial, setConvertedInitial] = useState(0);
@@ -27,10 +36,11 @@ export default function useCombinedHistory(assets = [], exchangeRates = {}) {
           let usedCache = false;
           let history = [];
           let convertedInitial = 0;
+          const normalizedId = normalizeCryptoId(id, type);
 
           try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/history?id=${id}&type=${type}`, {
+            const res = await fetch(`/api/history?id=${normalizedId}&type=${type}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }

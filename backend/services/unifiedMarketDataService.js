@@ -1,15 +1,18 @@
-// 📁 services/marketDataService.js
+// 📁 services/unifiedMarketDataService.js
 
 const yahooFinance = require('yahoo-finance2').default;
 const twelveData = require('./twelveDataService');
 const finnhubService = require('./finnhubService');
 const axios = require('axios');
 const redis = require('../redisClient');
+const { getIdForApi } = require('../utils/symbolMap');
 
 const FX_CACHE_KEY = 'fx:rates';
-const FX_TTL = 3600; // 1 hour
-const PRICE_TTL = 60; // 1 min
-const HISTORY_TTL = 43200; // 12h
+const FX_TTL = 3600;
+const PRICE_TTL = 60;
+const HISTORY_TTL = 43200;
+
+// EXCHANGE RATES
 
 async function getFXRates(currencies) {
   console.log('🌍 Getting FX Rates for:', currencies);
@@ -29,20 +32,17 @@ async function getFXRates(currencies) {
   return res.data?.rates;
 }
 
+// ACTUAL PRICES
+
 async function fetchPrice(id, type) {
   console.log('💸 Fetching price for:', id, '| Type:', type);
   const cacheKey = `price:${type}:${id.toLowerCase()}`;
-  const cached = await redis.get(cacheKey);
-  if (cached) {
-    console.log('📦 Price from cache for', id);
-    return JSON.parse(cached);
-  }
-
   let quote, currency = 'EUR';
-  const cleanId = id.toUpperCase().split('.')[0];
 
+  // 1 Try Yahoo Finance
   try {
-    const res = await yahooFinance.quote(id.toUpperCase());
+    const symbol = getIdForApi(id, type, 'yahoo') || id;
+    const res = await yahooFinance.quote(symbol);
     if (res?.regularMarketPrice) {
       quote = { price: res.regularMarketPrice, currency: res.currency?.toUpperCase() || 'EUR' };
       console.log('✅ Yahoo Finance quote:', quote);
@@ -51,25 +51,40 @@ async function fetchPrice(id, type) {
     console.warn('❌ Yahoo failed:', e.message);
   }
 
+  // 2 Try Finnhub
   if (!quote) {
     try {
-      quote = await finnhubService.getQuote(id.toUpperCase());
+      const symbol = getIdForApi(id, type, 'finnhub') || id;
+      quote = await finnhubService.getQuote(symbol);
       console.log('✅ Finnhub quote:', quote);
     } catch (e) {
       console.warn('❌ Finnhub failed:', e.message);
     }
   }
 
+  // 3 Try TwelveData
   if (!quote) {
     try {
-      quote = await twelveData.fetchQuote(cleanId);
+      const symbol = getIdForApi(id, type, 'twelve') || id;
+      quote = await twelveData.fetchQuote(symbol);
       console.log('✅ TwelveData quote:', quote);
     } catch (e) {
       console.warn('❌ TwelveData failed:', e.message);
     }
   }
 
+  // 4 Fallback to cache if all providers fail
   if (!quote?.price) {
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        console.log('📦 Price from cache (fallback) for', id);
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.warn('⚠️ Redis cache fallback failed:', err.message);
+    }
+
     console.error('🚫 No quote found for:', id);
     return null;
   }
@@ -86,14 +101,11 @@ async function fetchPrice(id, type) {
   return quote;
 }
 
+// HISTORICAL DATA (refactored: live-first, cache-fallback)
+
 async function fetchHistory(id, type) {
   console.log('📉 Fetching history for:', id, '| Type:', type);
   const cacheKey = `history:${type}:${id}`;
-  const cached = await redis.get(cacheKey);
-  if (cached) {
-    console.log('📦 History from cache for', id);
-    return JSON.parse(cached);
-  }
 
   const fullDateRange = Array.from({ length: 30 }, (_, i) => {
     const d = new Date();
@@ -113,21 +125,37 @@ async function fetchHistory(id, type) {
   let history = [];
   let currency = 'EUR';
 
+  // 1 Try TwelveData
   try {
-    const td = await twelveData.fetchTimeSeries(id, { interval: '1d', period1: new Date(Date.now() - 30 * 86400000) });
+    const symbol = getIdForApi(id, type, 'twelve') || id;
+    const td = await twelveData.fetchTimeSeries(symbol, {
+      interval: '1d',
+      period1: new Date(Date.now() - 30 * 86400000)
+    });
     if (td?.quotes?.length) {
       currency = td.meta?.currency || 'EUR';
-      history = td.quotes.map(p => ({ date: new Date(p.date).toISOString().split('T')[0], price: +p.close.toFixed(2) }));
+      history = td.quotes.map(p => ({
+        date: new Date(p.date).toISOString().split('T')[0],
+        price: +p.close.toFixed(2)
+      }));
       console.log('✅ TwelveData history:', history.length, 'items');
     }
   } catch (e) {
     console.warn('❌ TwelveData history failed:', e.message);
   }
 
+  // 2 Yahoo fallback
   if (!history.length) {
     try {
-      const yf = await yahooFinance.historical(id, { interval: '1d', period1: new Date(Date.now() - 30 * 86400000) });
-      history = yf.map(p => ({ date: p.date.toISOString().split('T')[0], price: +p.close.toFixed(2) }));
+      const symbol = getIdForApi(id, type, 'yahoo') || id;
+      const yf = await yahooFinance.historical(symbol, {
+        interval: '1d',
+        period1: new Date(Date.now() - 30 * 86400000)
+      });
+      history = yf.map(p => ({
+        date: p.date.toISOString().split('T')[0],
+        price: +p.close.toFixed(2)
+      }));
       currency = yf[0]?.currency || 'EUR';
       console.log('✅ Yahoo Finance history:', history.length, 'items');
     } catch (e) {
@@ -135,15 +163,32 @@ async function fetchHistory(id, type) {
     }
   }
 
+  // 3 Finnhub fallback
   if (!history.length) {
     try {
-      history = await finnhubService.getHistory(id.toUpperCase());
+      const symbol = getIdForApi(id, type, 'finnhub') || id;
+      history = await finnhubService.getHistory(symbol);
       currency = 'USD';
       console.log('✅ Finnhub history:', history.length, 'items');
     } catch (e) {
-      console.error('❌ All history sources failed for:', id);
-      return null;
+      console.warn('❌ Finnhub history failed:', e.message);
     }
+  }
+
+  // 4 Final fallback: Redis cache
+  if (!history.length) {
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        console.log('📦 History from cache (fallback) for', id);
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.warn('⚠️ Redis history fallback failed:', err.message);
+    }
+
+    console.error('🚫 No historical data found for:', id);
+    return null;
   }
 
   const result = { history: normalize(history), currency };
@@ -151,6 +196,8 @@ async function fetchHistory(id, type) {
   return result;
 }
 
+
+// CURRENT QUOTES (unchanged)
 
 async function getCurrentQuotes(tickers) {
   console.log('📥 Market data request received:', tickers);
@@ -162,30 +209,35 @@ async function getCurrentQuotes(tickers) {
 
     if (type === 'crypto') {
       let cryptoPrice = null;
+      let coinGeckoFailed = false;
+      let yahooFailed = false;
 
-      // 1️⃣ Try CoinGecko
       try {
         const cgRes = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
           params: { ids: id.toLowerCase(), vs_currencies: 'eur' }
         });
-
         if (cgRes.data[id]) {
           cryptoPrice = { eur: cgRes.data[id].eur };
           console.log(`✅ Crypto price from CoinGecko: ${id} = €${cryptoPrice.eur}`);
+        } else {
+          coinGeckoFailed = true;
         }
       } catch (err) {
+        coinGeckoFailed = true;
         console.error(`❌ CoinGecko error for ${id}:`, err.message);
       }
 
-      // 2️⃣ Fallback to Yahoo Finance
       if (!cryptoPrice) {
         try {
-          const yf = await yahooFinance.quote(`${id}-EUR`);
+          const yf = await yahooFinance.quote(`${id.toUpperCase()}-EUR`);
           if (yf?.regularMarketPrice) {
             cryptoPrice = { eur: yf.regularMarketPrice };
             console.log(`✅ Crypto price from Yahoo: ${id} = €${cryptoPrice.eur}`);
+          } else {
+            yahooFailed = true;
           }
         } catch (err) {
+          yahooFailed = true;
           console.error(`❌ Yahoo fallback failed for crypto ${id}:`, err.message);
         }
       }
@@ -193,7 +245,7 @@ async function getCurrentQuotes(tickers) {
       if (cryptoPrice) {
         result.cryptos[id.toLowerCase()] = cryptoPrice;
       } else {
-        console.warn(`🚫 No price found for crypto: ${id}`);
+        console.warn(`🚫 No price found for crypto: ${id} (CoinGecko failed: ${coinGeckoFailed}, Yahoo failed: ${yahooFailed})`);
       }
 
       continue;
@@ -238,5 +290,5 @@ module.exports = {
   fetchPrice,
   fetchHistory,
   getFXRates,
-  getCurrentQuotes, // 🧩 required export!
+  getCurrentQuotes,
 };

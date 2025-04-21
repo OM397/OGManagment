@@ -7,6 +7,8 @@ import useMarketData from '../assets/useMarketData';
 import { CATEGORIES } from '../../shared/config';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
 import { formatter } from '../../shared/utils';
+import { calculateTotals } from '../../shared/calculateAssetTotals';
+
 
 export default function Portfolio({ initialData, exchangeRates, reloadMarketData }) {
   const [activeTab, setActiveTab] = useState('Investments');
@@ -127,6 +129,8 @@ export default function Portfolio({ initialData, exchangeRates, reloadMarketData
         const price =
           type === 'manual'
             ? manualValue ?? 0
+
+
             : actualCost ?? marketData?.cryptos?.[id]?.eur ?? marketData?.stocks?.[id]?.eur ?? 0;
   
         total += initialQty * price;
@@ -151,7 +155,8 @@ export default function Portfolio({ initialData, exchangeRates, reloadMarketData
         <div className="flex gap-4 border-b border-gray-200 text-sm font-medium min-w-[500px]">
           {CATEGORIES.map(cat => {
             const isActive = activeTab === cat;
-            const total = getCategoryTotal(cat);
+            const { totalActual: total } = calculateTotals(categoryGroups, marketData, cat === 'Investments');
+
             const totalDisplay = total > 0 ? formatter.format(total) : '€€€€';
 
             return (

@@ -145,11 +145,12 @@ export default function AssetGroupList({
               a.type === 'manual'
                 ? a.manualValue ?? 0
                 : a.actualCost ??
-                  marketData?.cryptos?.[a.id]?.eur ??
+                  marketData?.cryptos?.[a.id?.toLowerCase?.()]?.eur ??
                   marketData?.stocks?.[a.id]?.eur ??
                   0;
             return sum + price * (a.initialQty || 0);
           }, 0);
+          
 
           const change =
             initialValue > 0 ? ((actualValue - initialValue) / initialValue) * 100 : 0;

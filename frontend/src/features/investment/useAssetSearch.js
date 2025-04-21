@@ -19,11 +19,16 @@ export function useAssetSearch(assetType, cryptos) {
 
     if (assetType === 'Cryptos') {
       const results = fuse.search(value).slice(0, 50);
-      setFilteredOptions(results.map(r => ({
-        label: `${r.item.name} (${r.item.symbol})`,
-        value: r.item.name,
-        id: r.item.id || r.item.symbol
-      })));
+      setFilteredOptions(results.map(r => {
+        const symbol = r.item.symbol.toUpperCase();
+        return {
+          label: `${r.item.name} (${symbol})`,
+          value: symbol,
+          id: symbol,
+          symbol,
+          name: r.item.name
+        };
+      }));
     } else {
       try {
         const res = await fetch(`/api/search-stocks?q=${encodeURIComponent(value)}`);

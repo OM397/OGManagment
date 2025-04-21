@@ -108,9 +108,10 @@ export default function InvestmentForm({ activeTab, onClose, showInline, setLast
     setFormData(prev => ({
       ...prev,
       name: option.label,
-      id: option.id?.toLowerCase().trim() || ''
+      id: option.id || ''  // Do NOT lowercase crypto symbols
     }));
   };
+  
 
   const renderAssetInput = () => {
     if (activeTab === 'Investments') {

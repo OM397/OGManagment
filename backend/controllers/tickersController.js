@@ -1,21 +1,39 @@
 // 📁 backend/controllers/tickersController.js
 
-const marketData = require('../services/unifiedMarketDataService');
+const axios = require('axios');
 const yahooFinance = require('yahoo-finance2').default;
 const twelveData = require('../services/twelveDataService');
-const fs = require('fs');
-const path = require('path');
+const marketData = require('../services/unifiedMarketDataService');
 
-exports.getTickers = (req, res) => {
+let cachedCryptos = [];
+let lastFetchTime = 0;
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+exports.getTickers = async (req, res) => {
+  const now = Date.now();
+  const query = (req.query.q || '').toLowerCase();
+
   try {
-    const cryptosPath = path.join(__dirname, '..', 'coingecko-tickers.json');
-    const cryptos = fs.existsSync(cryptosPath)
-      ? JSON.parse(fs.readFileSync(cryptosPath, 'utf-8'))
-      : [];
-    res.json({ cryptos, stocks: [] });
+    // Fetch if expired
+    if (!cachedCryptos.length || now - lastFetchTime > CACHE_TTL) {
+      console.log('🌐 Fetching CoinGecko coin list...');
+      const { data } = await axios.get('https://api.coingecko.com/api/v3/coins/list');
+      cachedCryptos = data;
+      lastFetchTime = now;
+      console.log(`✅ Loaded ${data.length} crypto tickers`);
+    }
+
+    const result = !query
+      ? cachedCryptos
+      : cachedCryptos.filter(c =>
+          c.name.toLowerCase().includes(query) ||
+          c.symbol.toLowerCase().includes(query)
+        ).slice(0, 100); // cap results for safety
+
+    res.json({ cryptos: result, stocks: [] });
   } catch (err) {
-    console.error('❌ Error loading tickers:', err.message);
-    res.status(500).json({ error: 'Failed to load tickers' });
+    console.error('❌ CoinGecko fetch failed:', err.message);
+    res.json({ cryptos: cachedCryptos, stocks: [] }); // fallback to cache
   }
 };
 
@@ -69,7 +87,6 @@ exports.getMarketData = async (req, res) => {
     console.log('✅ Market data response:', result);
     res.json(result);
   } catch (err) {
-    console.log('🔍 FINAL MARKET DATA RESPONSE:', JSON.stringify(result, null, 2));
     console.error("❌ Error fetching market data:", err.message);
     res.status(500).json({ error: 'Failed to fetch market data' });
   }

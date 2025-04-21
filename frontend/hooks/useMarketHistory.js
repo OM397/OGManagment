@@ -7,6 +7,15 @@ function getCurrencyRate(id, currency, exchangeRates) {
   return fallbackCurrency === 'EUR' ? 1 : exchangeRates?.[fallbackCurrency] || 1;
 }
 
+function normalizeCryptoId(id, type) {
+  if (type !== 'crypto') return id;
+  const map = {
+    bitcoin: 'BTC',
+    ethereum: 'ETH'
+  };
+  return map[id.toLowerCase()] || id.toUpperCase();
+}
+
 export default function useMarketHistory(id, type, initialQty = 1, initialCost = 0, exchangeRates = {}) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -16,6 +25,7 @@ export default function useMarketHistory(id, type, initialQty = 1, initialCost =
   useEffect(() => {
     if (!id || !type || id.length < 2) return;
 
+    const normalizedId = normalizeCryptoId(id, type);
     const controller = new AbortController();
     const signal = controller.signal;
     const cacheKey = `history-cache-${id}`;
@@ -25,7 +35,7 @@ export default function useMarketHistory(id, type, initialQty = 1, initialCost =
         setLoading(true);
         setUsedCache(false);
 
-        const res = await fetch(`${API_BASE}/history?id=${id}&type=${type}`, {
+        const res = await fetch(`${API_BASE}/history?id=${normalizedId}&type=${type}`, {
           credentials: 'include',
           signal
         });

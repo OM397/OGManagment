@@ -36,7 +36,11 @@ export default function AssetsSummary({ initialData, marketData, onlyInvestments
           const actualPrice =
             type === 'manual'
               ? manualValue ?? 0
-              : actualCost ?? marketData?.cryptos?.[id]?.eur ?? marketData?.stocks?.[id]?.eur ?? 0;
+              : actualCost ??
+              marketData?.cryptos?.[id?.toLowerCase?.()]?.eur ??
+              marketData?.stocks?.[id]?.eur ??
+              0;
+            
 
           const actualValue = initialQty * actualPrice;
 
