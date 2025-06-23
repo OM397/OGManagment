@@ -118,38 +118,22 @@ export default function Portfolio({ initialData, exchangeRates, reloadMarketData
     }
   }, [categoryGroups, initialData]);
 
-  const getCategoryTotal = (categoryKey) => {
-    let total = 0;
-    const groups = categoryGroups?.[categoryKey] || {};
-  
-    Object.values(groups).forEach(group => {
-      group.forEach(asset => {
-        const { initialQty = 0, actualCost, manualValue, id, type } = asset;
-  
-        const price =
-          type === 'manual'
-            ? manualValue ?? 0
+ 
 
+// …
 
-            : actualCost ?? marketData?.cryptos?.[id]?.eur ?? marketData?.stocks?.[id]?.eur ?? 0;
-  
-        total += initialQty * price;
-      });
-    });
-  
-    return total;
-  };
+// donde antes hacías getCategoryTotal('Investments'), ahora:
+const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, marketData, 'Investments');
   
 
   return (
     <div className="px-4 sm:px-6 md:px-8">
-      <AssetsSummary
-        activeTab={activeTab}
-        groups={Object.keys(normalizedGroups)}
-        initialData={categoryGroups}
-        marketData={marketData}
-        exchangeRates={exchangeRates}
-      />
+     <AssetsSummary
+  initialData={categoryGroups}
+  marketData={marketData}
+  activeTab={activeTab}
+/>
+
 
       <div className="overflow-x-auto mb-6">
         <div className="flex gap-4 border-b border-gray-200 text-sm font-medium min-w-[500px]">

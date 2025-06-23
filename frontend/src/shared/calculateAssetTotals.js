@@ -21,16 +21,18 @@ export function calculateTotals(categoryGroups = {}, marketData = {}, filter = n
     Object.values(category || {}).forEach(group => {
       if (!Array.isArray(group)) return;
 
-      group.forEach(asset => {
-        const { initialQty = 0, initialCost = 0, id, actualCost, manualValue, type } = asset;
+                group.forEach(asset => {
+              const { initialQty = 0, initialCost = 0, id, actualCost, manualValue, type } = asset;
+                // normalizamos el id a minúsculas para buscar en marketData
+                const key = id?.toLowerCase?.() ?? '';
 
-        const actualPrice =
-          type === 'manual'
-            ? manualValue ?? 0
-            : actualCost ??
-              marketData?.cryptos?.[id?.toLowerCase?.()]?.eur ??
-              marketData?.stocks?.[id]?.eur ??
-              0;
+                const actualPrice =
+                type === 'manual'
+                    ? (manualValue ?? 0)
+                    : actualCost ??
+                      marketData?.cryptos?.[key]?.eur ??
+                      marketData?.stocks?.[key]?.eur ??
+                      0;
 
         const actualValue = initialQty * actualPrice;
 

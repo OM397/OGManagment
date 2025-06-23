@@ -2,68 +2,56 @@
 import React from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { formatter } from '../../shared/utils';
+import { calculateTotals } from '../../shared/calculateAssetTotals';
 
 function AnimatedNumber({ value }) {
   const { number } = useSpring({
     from: { number: 0 },
-    number: value,
+    to:   { number: value },
     config: { mass: 1, tension: 140, friction: 20 }
   });
 
   return (
     <animated.span>
-      {number.to(val => formatter.format(Number(val.toFixed(0))))}
+      {number.to(n => formatter.format(Math.round(n)))}
     </animated.span>
   );
 }
 
-export default function AssetsSummary({ initialData, marketData, onlyInvestments = false }) {
-  let totalInitial = 0;
-  let totalActual = 0;
-
-  const categories = onlyInvestments
-    ? { Investments: initialData?.Investments || {} }
-    : initialData;
-
-  Object.values(categories || {}).forEach(category => {
-    Object.values(category).forEach(group => {
-      if (Array.isArray(group)) {
-        group.forEach(asset => {
-          const { initialQty = 0, initialCost = 0, id, actualCost, manualValue, type } = asset;
-
-          const initialValue = initialQty * initialCost;
-
-          const actualPrice =
-            type === 'manual'
-              ? manualValue ?? 0
-              : actualCost ??
-              marketData?.cryptos?.[id?.toLowerCase?.()]?.eur ??
-              marketData?.stocks?.[id]?.eur ??
-              0;
-            
-
-          const actualValue = initialQty * actualPrice;
-
-          totalInitial += initialValue;
-          totalActual += actualValue;
-        });
-      }
-    });
-  });
+/**
+ * Muestra la cifra sólo de la categoría activa (p.ej. 'Investments').
+ *
+ * Props:
+ * - initialData: el objeto completo de categoryGroups
+ * - marketData:  los precios que vienen del hook useMarketData
+ * - activeTab:   el nombre de la categoría activa ('Investments', 'Real Estate', 'Others', etc.)
+ */
+export default function AssetsSummary({ initialData, marketData, activeTab }) {
+  // Usamos calculateTotals para filtrar sólo la categoría activeTab
+  const { totalInitial, totalActual } = calculateTotals(
+    initialData,
+    marketData,
+    activeTab
+  );
 
   const changeAbs = totalActual - totalInitial;
   const changePct = totalInitial > 0 ? (changeAbs / totalInitial) * 100 : 0;
-  const isPositive = changePct > 0;
   const changeColor =
-    isPositive ? 'text-green-600' : changePct < 0 ? 'text-red-600' : 'text-gray-500';
+    changePct > 0
+      ? 'text-green-600'
+      : changePct < 0
+        ? 'text-red-600'
+        : 'text-gray-500';
 
   return (
     <div className="w-full mb-6 p-4 sm:p-6 bg-white rounded-2xl shadow-sm">
       <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6 flex-wrap">
+        {/* Total Actual */}
         <div className="text-3xl sm:text-4xl font-bold text-gray-900 leading-none">
           <AnimatedNumber value={totalActual} />
         </div>
 
+        {/* ABS y % */}
         <div className="grid grid-cols-2 gap-4 text-center sm:text-left">
           <div>
             <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-1">
