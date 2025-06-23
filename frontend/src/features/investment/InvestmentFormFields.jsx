@@ -1,6 +1,12 @@
 import React from 'react';
 
-export default function InvestmentFormFields({ activeTab, formData, setFormData, categoryGroups }) {
+export default function InvestmentFormFields({
+  activeTab,
+  formData,
+  setFormData,
+  categoryGroups,
+  assetType    // ya se lo pasamos desde InvestmentForm
+}) {
   return (
     <>
       <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-3">
@@ -24,6 +30,7 @@ export default function InvestmentFormFields({ activeTab, formData, setFormData,
           onChange={e => setFormData({ ...formData, cost: e.target.value })}
         />
 
+        {/* actualCost sólo si no estamos en Investments */}
         {activeTab !== 'Investments' && (
           <input
             className="border px-2 py-2 rounded w-full sm:w-44 flex-grow min-w-0"
@@ -44,7 +51,9 @@ export default function InvestmentFormFields({ activeTab, formData, setFormData,
       >
         <option value="">Select Group</option>
         {Object.keys(categoryGroups[activeTab] || {}).map(group => (
-          <option key={group} value={group}>{group}</option>
+          <option key={group} value={group}>
+            {group}
+          </option>
         ))}
       </select>
     </>

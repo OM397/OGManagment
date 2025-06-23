@@ -140,16 +140,19 @@ export default function AssetGroupList({
             0
           );
 
-          const actualValue = assets.reduce((sum, a) => {
-            const price =
-              a.type === 'manual'
-                ? a.manualValue ?? 0
-                : a.actualCost ??
-                  marketData?.cryptos?.[a.id?.toLowerCase?.()]?.eur ??
-                  marketData?.stocks?.[a.id]?.eur ??
-                  0;
-            return sum + price * (a.initialQty || 0);
-          }, 0);
+const actualValue = assets.reduce((sum, a) => {
+  const key = a.id.toLowerCase();
+  const price =
+    a.type === 'manual'
+      ? a.manualValue ?? 0
+      : a.actualCost ??
+        marketData?.cryptos?.[key]?.eur ??
+        marketData?.stocks?.[key]?.eur ??
+        0;
+
+  return sum + price * (a.initialQty || 0);
+}, 0);
+
           
 
           const change =

@@ -18,23 +18,26 @@ export default function AssetSearchInput({
       >
         <option value="Cryptos">Cryptos</option>
         <option value="Stocks">Stocks</option>
+        <option value="Others">Others</option>
       </select>
 
-      <div className="flex-1 min-w-0">
-        <Select
-          placeholder="Search asset..."
-          onInputChange={handleInputChange}
-          options={filteredOptions}
-          inputValue={inputValue}
-          onChange={onSelect}
-          isSearchable
-          menuIsOpen={inputValue.length >= 2}
-          styles={{
-            container: base => ({ ...base, width: '100%' }),
-            control: base => ({ ...base, minHeight: '42px' })
-          }}
-        />
-      </div>
+      {assetType !== 'Others' && (
+        <div className="flex-1 min-w-0">
+          <Select
+            placeholder="Search asset..."
+            onInputChange={handleInputChange}
+            options={filteredOptions}
+            inputValue={inputValue}
+            onChange={onSelect}
+            isSearchable
+            menuIsOpen={inputValue.length >= 2}
+            styles={{
+              container: base => ({ ...base, width: '100%' }),
+              control:   base => ({ ...base, minHeight: '42px' })
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
