@@ -6,8 +6,9 @@ import AssetGroupList from '../assets/AssetGroupList';
 import useMarketData from '../assets/useMarketData';
 import { CATEGORIES } from '../../shared/config';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
-import { formatter } from '../../shared/utils';
+//import { formatter } from '../../shared/utils';
 import { calculateTotals } from '../../shared/calculateAssetTotals';
+import { formatCurrency } from '../../shared/formatCurrency';
 
 
 export default function Portfolio({ initialData, exchangeRates, reloadMarketData }) {
@@ -131,7 +132,7 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
      <AssetsSummary
   initialData={categoryGroups}
   marketData={marketData}
-  activeTab={activeTab}
+  //activeTab={activeTab}
 />
 
 
@@ -141,7 +142,14 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
             const isActive = activeTab === cat;
             const { totalActual: total } = calculateTotals(categoryGroups, marketData, cat);
 
-            const totalDisplay = total > 0 ? formatter.format(total) : '€€€€';
+            
+            //const totalDisplay = total > 0 ? formatCurrency(total) : '€€€€';
+            const totalDisplay =
+  !isNaN(Number(total))
+    ? formatCurrency(Number(total))
+    : '€€€€';
+
+
 
             return (
               <button
@@ -161,7 +169,7 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
             );
           })}
         </div>
-      </div>,
+      </div>
     
 
 
@@ -207,5 +215,5 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
         allExpanded={allExpanded}
       />
     </div>
-  );
+  )
 }

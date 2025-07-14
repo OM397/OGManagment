@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
 import { formatter } from '../../shared/utils';
+import { formatCurrency } from '../../shared/formatCurrency';
 
 export default function GroupHeader({
   groupName,
@@ -77,8 +78,8 @@ export default function GroupHeader({
 
       <div className="flex flex-wrap items-start sm:items-center gap-4 justify-between w-full sm:w-auto">
         <div className="flex flex-col items-end text-right">
-          <div className="text-sm font-bold">{formatter.format(actualValue)}</div>
-          <div className="text-xs text-gray-400">vs {formatter.format(initialValue)}</div>
+          <div className="text-sm font-bold">{formatCurrency(actualValue)}</div>
+          <div className="text-xs text-gray-400">vs {formatCurrency(initialValue)}</div>
         </div>
 
         <div className="flex flex-col items-end text-xs font-medium">
@@ -88,7 +89,7 @@ export default function GroupHeader({
               : 'bg-red-50 text-red-600 border-red-100'
           }`}>
             {change >= 0 ? '+' : ''}
-            {formatter.format(actualValue - initialValue)}
+            {formatCurrency(actualValue - initialValue)}
           </div>
           <div className={changeColor}>{change.toFixed(2)}%</div>
         </div>

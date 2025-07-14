@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { formatter } from '../../shared/utils';
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
+import { formatCurrency } from '../../shared/formatCurrency';
 
 export default function AssetCard({
   asset,
@@ -115,7 +116,7 @@ export default function AssetCard({
         <div className="font-medium capitalize text-sm">{name}</div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-3 ml-auto text-right">
-          <div className="text-sm font-semibold">{formatter.format(actualValue)}</div>
+          <div className="text-sm font-semibold">{formatCurrency(actualValue)}</div>
           <div
             className={`px-2 py-0.5 border text-xs font-medium ${
               actualValue - initialValue >= 0
@@ -124,7 +125,7 @@ export default function AssetCard({
             }`}
           >
             {actualValue - initialValue >= 0 ? '+' : ''}
-            {formatter.format(actualValue - initialValue)}
+            {formatCurrency(actualValue - initialValue)}
           </div>
 
           <div className="flex items-center gap-2">
@@ -178,7 +179,7 @@ export default function AssetCard({
                   className="w-full border-b border-gray-300 focus:outline-none"
                 />
               ) : (
-                <div>{formatter.format(initialCost.toFixed(2))}</div>
+                <div>{formatCurrency(initialCost.toFixed(2))}</div>
               )}
             </div>
 
@@ -198,7 +199,7 @@ export default function AssetCard({
 
             <div>
               <div className="text-gray-400">Initial Value</div>
-              <div>{formatter.format(initialValue)}</div>
+              <div>{formatCurrency(initialValue)}</div>
             </div>
 
             <div>
@@ -212,7 +213,7 @@ export default function AssetCard({
                 />
               ) : (
                 <div className="group relative w-fit">
-                  <span>{formatter.format(actualPrice.toFixed(2))}</span>
+                  <span>{formatCurrency(actualPrice.toFixed(2))}</span>
                   {type === 'stock' && wasConverted && (
                     <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow z-10">
                       Convertido desde {stockCurrency}
@@ -229,7 +230,7 @@ export default function AssetCard({
 
             <div>
               <div className="text-gray-400">Actual Value</div>
-              <div>{formatter.format(actualValue)}</div>
+              <div>{formatCurrency(actualValue)}</div>
             </div>
           </div>
 

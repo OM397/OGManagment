@@ -16,34 +16,42 @@ export function calculateTotals(categoryGroups = {}, marketData = {}, filter = n
     // new use case: exact category name
     categoriesToUse = { [filter]: categoryGroups?.[filter] || {} };
   }
+// ...existing code...
+Object.values(categoriesToUse || {}).forEach(category => {
+  Object.values(category || {}).forEach(group => {
+    if (!Array.isArray(group)) return;
 
-  Object.values(categoriesToUse || {}).forEach(category => {
-    Object.values(category || {}).forEach(group => {
-      if (!Array.isArray(group)) return;
+    group.forEach(asset => {
+      const {
+        initialQty = 0,
+        initialCost = 0,
+        id,
+        actualCost,
+        manualValue,
+        type
+      } = asset;
+      const key = id?.toLowerCase?.() ?? '';
 
-                group.forEach(asset => {
-              const { initialQty = 0, initialCost = 0, id, actualCost, manualValue, type } = asset;
-                // normalizamos el id a minúsculas para buscar en marketData
-                const key = id?.toLowerCase?.() ?? '';
+      const qty = Number(initialQty) || 0;
+      const cost = Number(initialCost) || 0;
 
-                const actualPrice =
-                type === 'manual'
-                    ? (manualValue ?? 0)
-                    : actualCost ??
-                      marketData?.cryptos?.[key]?.eur ??
-                      marketData?.stocks?.[key]?.eur ??
-                      0;
+      const actualPrice =
+        type === 'manual'
+          ? Number(manualValue ?? 0)
+          : Number(actualCost ??
+              marketData?.cryptos?.[key]?.eur ??
+              marketData?.stocks?.[key]?.eur ??
+              0);
 
-        const actualValue = initialQty * actualPrice;
+      const actualValue = qty * actualPrice;
 
-        totalInitial += initialQty * initialCost;
-        totalActual += actualValue;
-      });
+      totalInitial += qty * cost;
+      totalActual += actualValue;
     });
   });
+});
 
-  return {
-    totalInitial: parseFloat(totalInitial.toFixed(2)),
-    totalActual: parseFloat(totalActual.toFixed(2))
-  };
-}
+return {
+  totalInitial: Number(totalInitial.toFixed(2)),
+  totalActual: Number(totalActual.toFixed(2))
+};}

@@ -1,20 +1,39 @@
 // 📁 frontend/features/assets/AssetsSummary.jsx
 import React from 'react';
 import { useSpring, animated } from '@react-spring/web';
-import { formatter } from '../../shared/utils';
 import { calculateTotals } from '../../shared/calculateAssetTotals';
+import { formatCurrency } from '../../shared/formatCurrency';
+
+function renderCurrencyParts(formatted) {
+  const match = formatted.match(/^([^,]+)(,\d{2})?(\s*€)?$/);
+  if (!match) return formatted;
+  const entero = match[1];
+  const decimales = match[2] || '';
+  const moneda = match[3] || '';
+  return (
+    <>
+      {entero}
+      {decimales && <span style={{ fontSize: '0.6em' }}>{decimales}</span>}
+      {moneda}
+    </>
+  );
+}
 
 function AnimatedNumber({ value }) {
+  const [display, setDisplay] = React.useState(formatCurrency(value));
   const { number } = useSpring({
     from: { number: 0 },
     to:   { number: value },
-    config: { mass: 1, tension: 140, friction: 20 }
+    config: { mass: 1, tension: 140, friction: 20 },
+    onChange: (result) => {
+      setDisplay(formatCurrency(result.value.number));
+    }
   });
 
   return (
-    <animated.span>
-      {number.to(n => formatter.format(Math.round(n)))}
-    </animated.span>
+    <span>
+      {renderCurrencyParts(display)}
+    </span>
   );
 }
 
@@ -58,7 +77,7 @@ export default function AssetsSummary({ initialData, marketData, activeTab }) {
               ABS.
             </div>
             <div className={`text-xs ${changeColor}`}>
-              {formatter.format(changeAbs)}
+             {formatCurrency(changeAbs)}
             </div>
           </div>
           <div>
@@ -72,5 +91,5 @@ export default function AssetsSummary({ initialData, marketData, activeTab }) {
         </div>
       </div>
     </div>
-  );
+  )
 }
