@@ -54,6 +54,7 @@ mongoose.connect(MONGODB_URI, {
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'https://ogmanagment-production-f730.up.railway.app',
   'https://www.capitaltracker.app'
 ];

@@ -84,4 +84,45 @@ router.post('/change-password', async (req, res) => {
   }
 });
 
+// 📧 GET /email-preference → obtener preferencia de email
+router.get('/email-preference', async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.user.username }).select('receiveWeeklyEmail');
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    res.status(200).json({ 
+      receiveWeeklyEmail: !!user.receiveWeeklyEmail,
+      timestamp: Date.now() // Para debugging y cache busting
+    });
+  } catch (err) {
+    console.error('Error al obtener preferencia de email:', err);
+    res.status(500).json({ error: 'Error al obtener preferencia de email.' });
+  }
+});
+
+// 📧 POST /email-preference → cambiar preferencia de email
+router.post('/email-preference', async (req, res) => {
+  try {
+    const { receiveWeeklyEmail } = req.body;
+    const user = await User.findOne({ username: req.user.username });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const oldValue = user.receiveWeeklyEmail;
+    user.receiveWeeklyEmail = !!receiveWeeklyEmail;
+    await user.save();
+
+    console.log(`[EMAIL PREF] Usuario ${req.user.username}: ${oldValue} → ${user.receiveWeeklyEmail}`);
+
+    res.status(200).json({ 
+      success: true, 
+      receiveWeeklyEmail: user.receiveWeeklyEmail,
+      message: user.receiveWeeklyEmail ? 'Activado el resumen semanal por email' : 'Desactivado el resumen semanal por email',
+      timestamp: Date.now()
+    });
+  } catch (err) {
+    console.error('Error al actualizar preferencia de email:', err);
+    res.status(500).json({ error: 'Error al actualizar preferencia de email.' });
+  }
+});
+
 module.exports = router;

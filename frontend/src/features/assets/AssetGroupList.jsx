@@ -14,6 +14,7 @@ export default function AssetGroupList({
   activeTab,
   lastAddedGroupName,
   lastAddedAssetId,
+  setLastAddedAssetId,
   lastRenamedGroupName,
   allExpanded = true
 }) {
@@ -51,7 +52,6 @@ export default function AssetGroupList({
   const [pageByGroup, setPageByGroup] = useState({});
   const [expandedGroups, setExpandedGroups] = useState({});
   const [highlightedGroup, setHighlightedGroup] = useState(null);
-  const [highlightedAssetId, setHighlightedAssetId] = useState(null);
   const [openMenu, setOpenMenu] = useState(null);
 
   useEffect(() => {
@@ -72,14 +72,6 @@ export default function AssetGroupList({
       return () => clearTimeout(timer);
     }
   }, [lastAddedGroupName, lastRenamedGroupName]);
-
-  useEffect(() => {
-    if (lastAddedAssetId) {
-      setHighlightedAssetId(lastAddedAssetId);
-      const timer = setTimeout(() => setHighlightedAssetId(null), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [lastAddedAssetId]);
 
   useEffect(() => {
     const newState = {};
@@ -233,7 +225,7 @@ const actualValue = assets.reduce((sum, a) => {
                     onDeleteAsset={onDeleteAsset}
                     activeTab={activeTab}
                     lastAddedAssetId={lastAddedAssetId}
-                    highlightedAssetId={highlightedAssetId}
+                    setLastAddedAssetId={setLastAddedAssetId}
                     onDropAsset={handleDropAsset}
                   />
                 )}

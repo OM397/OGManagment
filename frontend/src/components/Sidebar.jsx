@@ -1,21 +1,20 @@
-// 📁 frontend/src/shared/Sidebar.jsx
+// 🧭 Application Sidebar Component
 import React from 'react';
 import { BarChart2, Gem } from 'lucide-react';
-import { calculateTotals } from './calculateAssetTotals';
-import AnimatedNumber from './AnimatedNumber'; // ✅ import animation
-import { formatter } from './utils';
+import { calculateTotals } from '../shared/calculateAssetTotals';
+import AnimatedNumber from '../shared/AnimatedNumber';
 
 export default function Sidebar({ selected, setSelected, categoryGroups = {}, marketData = {} }) {
   const navItems = [
-    { name: 'Net Worth', label: 'Investments', icon: <BarChart2 size={18} /> },
+    { name: 'Dashboard', label: 'Dashboard', icon: <BarChart2 size={18} /> },
     { name: 'Assets', label: 'Assets', icon: <Gem size={18} /> }
   ];
 
-  const { totalActual: investmentsValue } = calculateTotals(categoryGroups, marketData, true);
+  const { totalActual: investmentsValue } = calculateTotals(categoryGroups, marketData, 'Investments');
   const { totalActual: allAssetsValue } = calculateTotals(categoryGroups, marketData, false);
 
   return (
-    <aside className="w-64 min-w-[16rem] max-w-[16rem] shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm">
+    <aside className="w-72 min-w-[18rem] max-w-[18rem] shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm">
       <div>
         <div className="p-4 md:p-6 flex justify-center border-b border-gray-100">
           <img
@@ -25,10 +24,10 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
           />
         </div>
 
-        <nav className="px-2 md:px-3 py-4 space-y-1">
+        <nav className="px-3 md:px-4 py-4 space-y-1">
           {navItems.map(({ name, label, icon }) => {
             const isActive = selected === name;
-            const animatedValue = name === 'Net Worth' ? investmentsValue : allAssetsValue;
+            const animatedValue = name === 'Dashboard' ? investmentsValue : allAssetsValue;
 
             return (
               <button
@@ -46,14 +45,11 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
                   </div>
                   <div className="flex flex-col items-start">
                     <span className="text-sm font-medium">{label}</span>
-                    {name === 'Net Worth' && (
-                      <span className={`text-xs ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>Dashboard</span>
-                    )}
                   </div>
                 </div>
 
                 <span className={`text-sm font-medium tabular-nums ${isActive ? 'text-gray-200' : 'text-gray-600'}`}>
-                  <AnimatedNumber value={animatedValue} /> {/* ✅ animate here */}
+                  <AnimatedNumber value={animatedValue} />
                 </span>
               </button>
             );

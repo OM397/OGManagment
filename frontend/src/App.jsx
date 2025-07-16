@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, useNavigate } from 'react-router-dom';
 import './shared/styles/index.css';
 import AppRoutes from './shared/router/AppRoutes';
+import AppLayout from './layouts/AppLayout';
+import Dashboard from './pages/Dashboard';
+import Assets from './pages/Assets';
+import useMarketData from './features/assets/useMarketData';
+import { useCategoryGroups } from './shared/context/CategoryGroupsContext';
 import { API_BASE } from './shared/config';
 
 function App() {

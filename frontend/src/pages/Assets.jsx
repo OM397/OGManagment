@@ -1,29 +1,38 @@
-// 📁 frontend/features/portfolio/Portfolio.jsx
+// � All Assets Management - Complete Portfolio Management
 import React, { useState, useEffect } from 'react';
-import AssetsSummary from '../assets/AssetsSummary';
-import GroupManager from '../assets/GroupManager';
-import AssetGroupList from '../assets/AssetGroupList';
-import useMarketData from '../assets/useMarketData';
-import { CATEGORIES } from '../../shared/config';
-import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
-import { calculateTotals } from '../../shared/calculateAssetTotals';
-import { formatCurrency } from '../../shared/formatCurrency';
-import { Button, TabNav } from '../../shared/design/components';
-import { CurrencyDisplay } from '../../shared/design/financial';
-import tokens from '../../shared/design/tokens';
+import AssetsSummary from '../features/assets/AssetsSummary';
+import GroupManager from '../features/assets/GroupManager';
+import AssetGroupList from '../features/assets/AssetGroupList';
+import { CATEGORIES } from '../shared/config';
+import { TabNav } from '../shared/design/components';
+import { calculateTotals } from '../shared/calculateAssetTotals';
 
-
-export default function Portfolio({ initialData, exchangeRates, reloadMarketData }) {
+export default function Assets({ 
+  categoryGroups, 
+  marketData, 
+  setCategoryGroups,
+  exchangeRates,
+  reloadMarketData 
+}) {
   const [activeTab, setActiveTab] = useState('Investments');
   const [showAddInvestment, setShowAddInvestment] = useState(false);
   const [lastAddedGroupName, setLastAddedGroupName] = useState(null);
   const [lastRenamedGroupName, setLastRenamedGroupName] = useState(null);
   const [lastAddedAssetId, setLastAddedAssetId] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Force clear any existing highlights on component mount
+  useEffect(() => {
+    setLastAddedAssetId(null);
+    // Mark initial load as complete after a short delay
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
   const [allExpanded, setAllExpanded] = useState(true);
 
-  const { categoryGroups, setCategoryGroups } = useCategoryGroups();
   const normalizedGroups = categoryGroups[activeTab] || {};
-  const { marketData, error: marketDataError } = useMarketData(categoryGroups, reloadMarketData);
 
   const handleAddGroup = (name) => {
     if (!name.trim()) return;
@@ -94,39 +103,26 @@ export default function Portfolio({ initialData, exchangeRates, reloadMarketData
     setLastRenamedGroupName(newName);
   };
 
+  // Detect new assets being added (only after initial load)
   useEffect(() => {
-    for (const category of CATEGORIES) {
-      const currentGroups = categoryGroups[category] || {};
-      const initialGroups = initialData?.[category] || {};
+    // Skip detection during initial load
+    if (isInitialLoad) return;
+    
+    // Simple approach: only highlight when explicitly called through onAddAsset
+    // The drag & drop and other asset operations will call setLastAddedAssetId directly
+  }, [categoryGroups, isInitialLoad]); // Added isInitialLoad dependency
 
-      for (const groupName in currentGroups) {
-        const newAssets = currentGroups[groupName] || [];
-        const oldAssets = initialGroups[groupName] || [];
-
-        if (newAssets.length > oldAssets.length) {
-          const addedAsset = newAssets.find(
-            newAsset => !oldAssets.some(oldAsset =>
-              oldAsset.name === newAsset.name &&
-              oldAsset.id === newAsset.id &&
-              oldAsset.initialCost === newAsset.initialCost &&
-              oldAsset.initialQty === newAsset.initialQty
-            )
-          );
-          if (addedAsset) {
-            setLastAddedAssetId(addedAsset.id);
-            return;
-          }
-        }
-      }
+  // Clear highlight after 3 seconds
+  useEffect(() => {
+    if (lastAddedAssetId) {
+      const timer = setTimeout(() => {
+        setLastAddedAssetId(null);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [categoryGroups, initialData]);
+  }, [lastAddedAssetId]);
 
- 
-
-// …
-
-// donde antes hacías getCategoryTotal('Investments'), ahora:
-const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, marketData, 'Investments');
   // Prepare totals for TabNav
   const tabTotals = CATEGORIES.reduce((acc, cat) => {
     const { totalActual } = calculateTotals(categoryGroups, marketData, cat);
@@ -136,12 +132,19 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
 
   return (
     <div className="px-4 sm:px-6 md:px-8">
-     <AssetsSummary
-  initialData={categoryGroups}
-  marketData={marketData}
-  //activeTab={activeTab}
-/>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">All Assets</h1>
+        <p className="text-gray-600">Complete overview of your investment portfolio</p>
+      </div>
 
+      {/* Portfolio Summary */}
+      <AssetsSummary
+        initialData={categoryGroups}
+        marketData={marketData}
+        activeTab={activeTab}
+      />
+
+      {/* Category Tabs - ¡AQUÍ ESTÁN LAS PESTAÑAS! */}
       <div className="mb-6">
         <TabNav 
           tabs={CATEGORIES}
@@ -152,17 +155,19 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
         />
       </div>
 
-
+      {/* Asset Management */}
       <GroupManager
         activeTab={activeTab}
         showAddInvestment={showAddInvestment}
         setShowAddInvestment={setShowAddInvestment}
         onAddGroup={handleAddGroup}
         onAddAsset={(asset) => setLastAddedAssetId(asset.id)}
+        lastAddedGroupName={lastAddedGroupName}
         lastAddedAssetId={lastAddedAssetId}
         setLastAddedAssetId={setLastAddedAssetId}
       />
 
+      {/* Expand/Collapse All Button */}
       <div className="flex justify-end mb-3">
         <button
           onClick={() => setAllExpanded(prev => !prev)}
@@ -181,6 +186,7 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
         </button>
       </div>
 
+      {/* Asset Groups List */}
       <AssetGroupList
         groups={normalizedGroups}
         marketData={marketData}
@@ -191,9 +197,10 @@ const { totalActual: investmentsTotal } = calculateTotals(categoryGroups, market
         activeTab={activeTab}
         lastAddedGroupName={lastAddedGroupName}
         lastAddedAssetId={lastAddedAssetId}
+        setLastAddedAssetId={setLastAddedAssetId}
         lastRenamedGroupName={lastRenamedGroupName}
         allExpanded={allExpanded}
       />
     </div>
-  )
+  );
 }

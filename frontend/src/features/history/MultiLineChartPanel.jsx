@@ -72,7 +72,7 @@ export default function MultiLineChartPanel({ multiHistory }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={600}>
           <LineChart data={chartData}>
             <XAxis
               dataKey="date"
