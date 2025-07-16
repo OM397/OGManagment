@@ -24,12 +24,24 @@ const baseDir = './routes';           // ✅ Always from root of /app
 const middlewareBase = './middleware';
 
 
+
 const tickersRoutes = require(path.join(__dirname, baseDir, 'tickersRoutes.js'));
 const authRoutes = require(path.join(__dirname, baseDir, 'authRoutes.js'));
 const adminRoutes = require(path.join(__dirname, baseDir, 'adminRoutes.js'));
 const userRoutes = require(path.join(__dirname, baseDir, 'userRoutes.js'));
 const tickersHistoryRoutes = require(path.join(__dirname, baseDir, 'tickersHistoryRoutes.js'));
+const investmentAnalysisRoutes = require(path.join(__dirname, baseDir, 'investmentAnalysisRoutes.js'));
+const mailingConfigRoutes = require(path.join(__dirname, baseDir, 'mailingConfigRoutes.js'));
+const adminMailingRoutes = require(path.join(__dirname, baseDir, 'adminMailingRoutes.js'));
+
 const authMiddleware = require(path.join(__dirname, middlewareBase, 'authMiddleware.js'));
+
+// Iniciar el scheduler de mailing semanal
+const { scheduleMailingJob, watchMailingConfig } = require('./mailingScheduler');
+mongoose.connection.once('open', async () => {
+  await scheduleMailingJob();
+  watchMailingConfig();
+});
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
@@ -66,11 +78,15 @@ const authLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta más tarde.' }
 });
 
+
 app.use('/api', tickersRoutes);
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api', adminRoutes);
+app.use('/api/investments', investmentAnalysisRoutes);
 app.use('/api', tickersHistoryRoutes);
+app.use('/api/mailing-config', mailingConfigRoutes);
+app.use('/api/admin', adminMailingRoutes);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {

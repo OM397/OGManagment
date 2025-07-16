@@ -1,5 +1,6 @@
 // 📁 frontend/src/features/assets/AssetCard.jsx
 import React, { useState, useEffect } from 'react';
+import useInvestmentsIRR from './useInvestmentsIRR';
 import { formatter } from '../../shared/utils';
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
@@ -26,6 +27,11 @@ export default function AssetCard({
   const { setCategoryGroups } = useCategoryGroups();
 
   const { name, id, initialQty, initialCost, type: assetType, manualValue, initialDate } = asset;
+
+  // Solo para Investments: obtener IRR por id
+  const showIRR = activeTab === 'Investments';
+  const { irr: irrData, loading: loadingIRR, refetch: refetchIRR } = useInvestmentsIRR();
+  const irr = irrData?.[id]?.irr;
 
   const type = assetType || (
     marketData?.cryptos?.[id?.toLowerCase()] ? 'crypto' :
@@ -86,10 +92,17 @@ export default function AssetCard({
       if (type === 'manual') {
         asset.manualValue = parsedActual;
       }
+      // Persist actualValue (EUR) for backend IRR calculation
+      asset.actualValue = actualValue;
+      asset.actualValueEUR = actualValue;
       return updated;
     });
 
     setEditMode(false);
+    // Refrescar la TIR tras guardar cambios
+    setTimeout(() => {
+      refetchIRR();
+    }, 300);
   };
 
   const handleDragStart = (e) => {
@@ -245,7 +258,23 @@ export default function AssetCard({
                   className="w-full border-b border-gray-300 focus:outline-none"
                 />
               ) : (
-                <div>{initialDate || '-'}</div>
+                <div>
+                  {initialDate || '-'}
+                  {showIRR && (
+                    <div className="mt-1 text-xs">
+                      <span className="font-semibold">TIR: </span>
+                      {loadingIRR ? (
+                        <span className="text-gray-400">Calculando...</span>
+                      ) : irr !== undefined && irr !== null ? (
+                        <span className={irr > 0 ? 'text-green-600' : irr < 0 ? 'text-red-600' : 'text-gray-600'}>
+                          {(irr * 100).toFixed(2)}%
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

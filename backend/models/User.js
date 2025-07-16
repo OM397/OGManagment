@@ -2,6 +2,10 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
+  receiveWeeklyEmail: {
+    type: Boolean,
+    default: false
+  },
   username: {
     type: String,
     required: true,

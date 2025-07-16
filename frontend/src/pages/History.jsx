@@ -13,11 +13,15 @@ import LineChartPanel from '../features/history/LineChartPanel';
 import PieChartPanel from '../features/history/PieChartPanel';
 import AssetsSummary from '../features/assets/AssetsSummary';
 import MultiLineChartPanel from '../features/history/MultiLineChartPanel';
+import useInvestmentsIRR from '../features/history/useInvestmentsIRR';
 
 export default function History() {
   const { categoryGroups } = useCategoryGroups();
   const { exchangeRates, marketData } = useMarketData(categoryGroups);
   const userAssets = useUserAssets(categoryGroups);
+
+  // Hook de IRR debe ir aquí, dentro del componente
+  const { irr: irrData, loading: loadingIRR } = useInvestmentsIRR();
 
   const [selectedId, setSelectedId] = useState('ALL');
   const selected = userAssets.find(a => a.id === selectedId);
@@ -135,6 +139,8 @@ export default function History() {
           totalCurrent={totalCurrent}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          irrData={irrData}
+          loadingIRR={loadingIRR}
         />
       </div>
 

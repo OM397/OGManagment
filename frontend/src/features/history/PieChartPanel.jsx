@@ -8,7 +8,9 @@ export default function PieChartPanel({
   pieDataMarket,
   totalCurrent,
   onSelect,
-  selectedId
+  selectedId,
+  irrData = {},
+  loadingIRR = false
 }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const fadedColor = '#e5e7eb';
@@ -59,7 +61,7 @@ export default function PieChartPanel({
       <div className="relative w-full h-80">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 50 }} />
+            <Tooltip content={<CustomTooltip irrData={irrData} loadingIRR={loadingIRR} />} wrapperStyle={{ zIndex: 50 }} />
 
             <Pie
               data={dataInitial}

@@ -30,7 +30,7 @@ exports.getHistoricalData = async (req, res) => {
   const { id, type, bypass } = req.query;
   if (!id || !type) return res.status(400).json({ error: 'Missing id or type' });
 
-  console.log('📅 Historical data request:', { id, type, bypass });
+  //console.log('📅 Historical data request:', { id, type, bypass });
 
   const fullDateRange = getLastNDates(30);
 

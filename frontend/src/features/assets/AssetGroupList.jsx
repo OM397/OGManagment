@@ -19,6 +19,35 @@ export default function AssetGroupList({
 }) {
   const { setCategoryGroups } = useCategoryGroups();
 
+  // Persist actualValue (EUR) for all investments on every marketData/groups change
+  useEffect(() => {
+    if (activeTab !== 'Investments' || !groups || !marketData) return;
+    setCategoryGroups(prev => {
+      const updated = { ...prev };
+      const invGroups = updated['Investments'] || {};
+      let changed = false;
+      for (const [groupName, assets] of Object.entries(invGroups)) {
+        if (!Array.isArray(assets)) continue;
+        for (const asset of assets) {
+          const key = asset.id?.toLowerCase();
+          let actualPrice = 0;
+          if (asset.type === 'manual') {
+            actualPrice = asset.manualValue ?? 0;
+          } else {
+            actualPrice = asset.actualCost ?? marketData?.cryptos?.[key]?.eur ?? marketData?.stocks?.[key]?.eur ?? 0;
+          }
+          const newActualValue = (asset.initialQty || 0) * actualPrice;
+          if (asset.actualValue !== newActualValue || asset.actualValueEUR !== newActualValue) {
+            asset.actualValue = newActualValue;
+            asset.actualValueEUR = newActualValue;
+            changed = true;
+          }
+        }
+      }
+      return changed ? updated : prev;
+    });
+  }, [groups, marketData, activeTab, setCategoryGroups]);
+
   const [pageByGroup, setPageByGroup] = useState({});
   const [expandedGroups, setExpandedGroups] = useState({});
   const [highlightedGroup, setHighlightedGroup] = useState(null);

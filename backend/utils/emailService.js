@@ -1,7 +1,9 @@
 // 📁 backend/utils/emailService.js
 
-const { Resend } = require('resend');
 
+require('dotenv').config();
+console.log('RESEND_API_KEY:', process.env.RESEND_API_KEY);
+const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendEmail({ to, subject, html }) {
