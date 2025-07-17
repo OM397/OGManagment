@@ -4,7 +4,7 @@ import { BarChart2, Gem } from 'lucide-react';
 import { calculateTotals } from '../shared/calculateAssetTotals';
 import AnimatedNumber from '../shared/AnimatedNumber';
 
-export default function Sidebar({ selected, setSelected, categoryGroups = {}, marketData = {} }) {
+export default function Sidebar({ selected, setSelected, categoryGroups = {}, marketData = {}, isOpen, onClose }) {
   const navItems = [
     { name: 'Dashboard', label: 'Dashboard', icon: <BarChart2 size={18} /> },
     { name: 'Assets', label: 'Assets', icon: <Gem size={18} /> }
@@ -13,8 +13,18 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
   const { totalActual: investmentsValue } = calculateTotals(categoryGroups, marketData, 'Investments');
   const { totalActual: allAssetsValue } = calculateTotals(categoryGroups, marketData, false);
 
+  const handleItemClick = (name) => {
+    setSelected(name);
+    if (onClose) onClose(); // Close sidebar on mobile after selection
+  };
+
   return (
-    <aside className="w-72 min-w-[18rem] max-w-[18rem] shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm">
+    <aside className={`
+      fixed lg:static inset-y-0 left-0 z-30 w-72 min-w-[18rem] max-w-[18rem] shrink-0 
+      bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm
+      transform transition-transform duration-300 ease-in-out lg:transform-none
+      ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+    `}>
       <div>
         <div className="p-4 md:p-6 flex justify-center border-b border-gray-100">
           <img
@@ -37,7 +47,7 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
                     ? 'bg-gray-900 text-white shadow-sm'
                     : 'hover:bg-gray-100 text-gray-700 hover:text-gray-900'
                 }`}
-                onClick={() => setSelected(name)}
+                onClick={() => handleItemClick(name)}
               >
                 <div className="flex items-center gap-3">
                   <div className={`${isActive ? 'text-white' : 'text-gray-500'}`}>

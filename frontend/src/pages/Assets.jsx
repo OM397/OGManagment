@@ -131,7 +131,7 @@ export default function Assets({
   }, {});
 
   return (
-    <div className="px-4 sm:px-6 md:px-8">
+    <div className="px-4 sm:px-6 md:px-8 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">All Assets</h1>
         <p className="text-gray-600">Complete overview of your investment portfolio</p>

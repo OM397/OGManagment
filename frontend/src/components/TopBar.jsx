@@ -1,8 +1,8 @@
 // 📱 Application Top Bar Component
 import React, { useState, useRef, useEffect } from 'react';
-import { User, RefreshCw, LogOut, Settings, Mail } from 'lucide-react';
+import { User, RefreshCw, LogOut, Settings, Mail, Menu } from 'lucide-react';
 
-export default function TopBar({ user, onReload, onChangePassword, onMailingSettings }) {
+export default function TopBar({ user, onReload, onChangePassword, onMailingSettings, onMenuClick }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -37,10 +37,21 @@ export default function TopBar({ user, onReload, onChangePassword, onMailingSett
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex-1">
-          {/* Space for future search or breadcrumbs */}
+        <div className="flex items-center gap-3">
+          {/* Mobile menu button */}
+          <button
+            onClick={onMenuClick}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
+            title="Open menu"
+          >
+            <Menu size={20} />
+          </button>
+          
+          <div className="flex-1">
+            {/* Space for future search or breadcrumbs */}
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -60,7 +71,7 @@ export default function TopBar({ user, onReload, onChangePassword, onMailingSett
               className="flex items-center gap-2 p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <User size={18} />
-              <span className="text-sm font-medium">{user || 'User'}</span>
+              <span className="text-sm font-medium hidden sm:block">{user || 'User'}</span>
             </button>
 
             {dropdownOpen && (
