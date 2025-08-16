@@ -17,9 +17,12 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
     });
   }, []);
 
-  // Limpiar hover al salir del área
+  // Limpiar hover al salir del área - optimizado para móvil
   useEffect(() => {
     const handleDocMove = (e) => {
+      // Skip hover logic on touch devices to avoid conflicts
+      if (e.type === 'touchmove') return;
+      
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       if (
@@ -31,7 +34,13 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
         if (hoveredIndex !== null) setHoveredIndex(null);
       }
     };
-    document.addEventListener('mousemove', handleDocMove);
+
+    // Only add mousemove on non-touch devices
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice) {
+      document.addEventListener('mousemove', handleDocMove, { passive: true });
+    }
+
     return () => {
       document.removeEventListener('mousemove', handleDocMove);
       if (rafRef.current) {
@@ -44,30 +53,33 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
   // Desfiltrar al hacer click en cualquier parte de la página SOLO si el filtro viene del gráfico
   useEffect(() => {
     const handleDocClick = (e) => {
-      // Detect interactive targets robustly (works with shadow DOM via composedPath)
-      const path = (e.composedPath && e.composedPath()) || e.path || (e.target ? [e.target] : []);
-      const isInteractive = path.some(el => {
-        try {
-          return el && el.matches && (
-            el.matches('button, [role="button"], .filter-tab, input, select, textarea, [tabindex], a') ||
-            el.getAttribute && el.getAttribute('onclick') !== null
-          );
-        } catch { return false; }
-      });
+      // Skip if not from chart selection
+      if (selectedId === 'ALL' || selectionSource !== 'chart') return;
+
+      // Improved mobile-friendly target detection
+      const target = e.target;
+      const isInteractive = target.closest('button, [role="button"], .filter-tab, input, select, textarea, [tabindex], a') ||
+                           target.onclick ||
+                           target.getAttribute('onclick') ||
+                           target.matches && target.matches('button, input, select, textarea, a, [role="button"]');
+      
       if (isInteractive) return;
-      // No hacer stopPropagation para evitar interferencia con otros eventos
-      if (selectedId !== 'ALL' && selectionSource === 'chart' && typeof onSelect === 'function') {
+
+      // Only deselect if clicking outside interactive elements
+      if (typeof onSelect === 'function') {
         onSelect('ALL');
       }
     };
+
     if (selectedId !== 'ALL' && selectionSource === 'chart') {
-      // Listen to click (fires after touchend) rather than touchstart to avoid
-      // consuming the first tap on mobile devices (causes double-tap behavior).
-      document.addEventListener('mousedown', handleDocClick);
-      document.addEventListener('click', handleDocClick);
+      // Use passive listeners and add touchend for better mobile support
+      const options = { passive: true, capture: true };
+      document.addEventListener('click', handleDocClick, options);
+      document.addEventListener('touchend', handleDocClick, options);
+      
       return () => {
-        document.removeEventListener('mousedown', handleDocClick);
-        document.removeEventListener('click', handleDocClick);
+        document.removeEventListener('click', handleDocClick, { capture: true });
+        document.removeEventListener('touchend', handleDocClick, { capture: true });
       };
     }
   }, [selectedId, selectionSource, onSelect]);
@@ -105,13 +117,19 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
     />
   );
 
-  const handleClick = (data) => {
+  const handleClick = (data, e) => {
+    // Prevent event bubbling to avoid conflicts
+    if (e) {
+      e.stopPropagation();
+    }
+    
     if (data?.payload?.id && typeof onSelect === 'function') {
       onSelect(data.payload.id);
     }
   };
 
   const handleBackgroundClick = (e) => {
+    // Only trigger if clicking directly on the background container
     if (e.target === e.currentTarget && typeof onSelect === 'function') {
       onSelect('ALL');
     }

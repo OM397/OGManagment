@@ -66,10 +66,18 @@ export default function AppLayout({
       
       {/* Overlay for mobile when sidebar is open */}
       {sidebarOpen && (
-  <div
+        <div
           className="fixed inset-0 bg-black bg-opacity-40 z-20 lg:hidden"
           style={{ pointerEvents: 'auto' }}
+          onTouchEnd={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[AppLayout] Overlay touched. sidebarOpen antes:', sidebarOpen);
+            setSidebarOpen(false);
+          }}
           onClick={e => {
+            // Only handle click if not from touch
+            if (e.detail === 0) return; // Skip programmatic clicks
             e.stopPropagation();
             console.log('[AppLayout] Overlay clicked. Event:', e.type, 'sidebarOpen antes:', sidebarOpen);
             setSidebarOpen(false);

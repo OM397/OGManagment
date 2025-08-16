@@ -62,7 +62,7 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
                       : 'hover:bg-gray-100 text-gray-700 hover:text-gray-900'
                   }`}
                   onClick={() => handleSelect(name)}
-                  onPointerDown={() => handleSelect(name)}
+                  style={{ touchAction: 'manipulation' }}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`${isActive ? 'text-white' : 'text-gray-500'}`}> 
