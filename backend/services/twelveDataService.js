@@ -1,34 +1,38 @@
 // 📁 backend/services/twelveDataService.js
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const redisClient = require('../redisClient');
 require('dotenv').config();
 
 const API_KEY = process.env.TWELVE_API_KEY;
 const BASE_URL = 'https://api.twelvedata.com';
-const CACHE_DIR = path.join(__dirname, '../.cache');
 
-if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR);
-
-const cacheWrite = (key, data) => {
+// Redis-based cache functions
+const cacheWrite = async (key, data) => {
   try {
-    fs.writeFileSync(path.join(CACHE_DIR, `${key}.json`), JSON.stringify(data));
-  } catch (_) {}
+    const cacheKey = `twelve_data:${key}`;
+    const cacheData = {
+      data,
+      timestamp: Date.now()
+    };
+    // 5 minute TTL for TwelveData responses
+    await redisClient.set(cacheKey, JSON.stringify(cacheData), 'EX', 300);
+    console.log(`✅ TwelveData cached: ${key}`);
+  } catch (error) {
+    console.warn('⚠️ TwelveData cache write failed:', error.message);
+  }
 };
 
-const cacheRead = (key) => {
+const cacheRead = async (key) => {
   try {
-    const file = path.join(CACHE_DIR, `${key}.json`);
-    if (!fs.existsSync(file)) return null;
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    // Backward-compat: if cache is an array of {date, price}, wrap into {quotes, meta}
-    if (Array.isArray(parsed)) {
-      return { quotes: parsed.map(p => ({ date: p.date, close: p.price })), meta: {} };
+    const cacheKey = `twelve_data:${key}`;
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      return parsed.data;
     }
-    // If already in new format, return as is
-    if (parsed && parsed.quotes) return parsed;
     return null;
-  } catch (_) {
+  } catch (error) {
+    console.warn('⚠️ TwelveData cache read failed:', error.message);
     return null;
   }
 };
@@ -47,12 +51,12 @@ const fetchQuote = async (symbol) => {
         price: parseFloat(data.price),
         currency: data.currency
       };
-      cacheWrite(`quote_${symbol}`, parsed);
+      await cacheWrite(`quote_${symbol}`, parsed);
       return parsed;
     }
     throw new Error(data?.message || 'Quote fetch failed');
   } catch (err) {
-    return cacheRead(`quote_${symbol}`);
+    return await cacheRead(`quote_${symbol}`);
   }
 };
 
@@ -94,13 +98,13 @@ const fetchTimeSeries = async (symbol, optsOrInterval = '1day', outputsize = 30)
 
       const meta = { currency: (data.meta && data.meta.currency) || data.currency };
       const payload = { quotes, meta };
-      cacheWrite(`history_${symbol}`, payload);
+      await cacheWrite(`history_${symbol}`, payload);
       return payload;
     }
     throw new Error(data?.message || 'Time Series fetch failed');
   } catch (err) {
     // Fallback to cache (normalized)
-    return cacheRead(`history_${symbol}`);
+    return await cacheRead(`history_${symbol}`);
   }
 };
 
