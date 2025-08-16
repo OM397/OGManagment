@@ -1,5 +1,5 @@
-// PieChartVisual.jsx
-// Componente visual para el gráfico de pastel de assets
+// frontend/src/dashboard2/PieChartVisual.jsx
+
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from 'recharts';
 import { useState, useRef, useCallback, useEffect } from 'react';
 
@@ -50,36 +50,9 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
     };
   }, [hoveredIndex]);
 
-  // Handles clicks outside the component to deselect the active pie slice.
-  // This is a robust and standard implementation for "click outside" functionality.
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      // If the click is inside the chart's container, do nothing.
-      if (containerRef.current && containerRef.current.contains(event.target)) {
-        return;
-      }
-      // If the click is outside, deselect by calling onSelect with 'ALL'.
-      if (typeof onSelect === 'function') {
-        onSelect('ALL');
-      }
-    };
-
-    // Only attach the listener when a slice is selected from the chart.
-    if (selectedId !== 'ALL' && selectionSource === 'chart') {
-      // Use a timeout to ensure this listener is added after the click event 
-      // that triggered the selection has completed. This prevents an immediate deselect.
-      const timer = setTimeout(() => {
-        // Listen on the bubble phase (default) to avoid interfering with other components' click handlers.
-        // We only listen for 'click' to avoid double-event issues on mobile (touchend + click).
-        document.addEventListener('click', handleOutsideClick);
-      }, 0);
-
-      return () => {
-        clearTimeout(timer);
-        document.removeEventListener('click', handleOutsideClick);
-      };
-    }
-  }, [selectedId, selectionSource, onSelect]);
+  // --- BLOQUE ELIMINADO ---
+  // El useEffect que añadía un event listener global al 'document' ha sido eliminado.
+  // Esta era la causa del problema del "doble touch" en tu móvil.
 
   const cleanName = (name) =>
     name
@@ -114,7 +87,7 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
     />
   );
 
-  const handleClick = (data, e) => {
+  const handleClick = (data) => {
     if (data?.payload?.id && typeof onSelect === 'function') {
       onSelect(data.payload.id);
     }
