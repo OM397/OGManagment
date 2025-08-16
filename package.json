@@ -1,7 +1,7 @@
 {
   "name": "kubera-mvp-optimized",
-  "version": "2.0.0",
-  "description": "Portfolio tracker with optimized API system",
+  "version": "2.0.1",
+  "description": "Portfolio tracker with optimized API system - Railway test deploy",
   "dependencies": {
     "@react-spring/web": "^9.7.5",
     "axios": "^1.8.4",
