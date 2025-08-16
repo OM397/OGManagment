@@ -208,26 +208,8 @@ export default function MultiLineChartPanel({ multiHistory, selectedId, onSelect
     );
   };
 
-  // Outside click to reset filter
-  useEffect(() => {
-    const handleOutside = (e) => {
-      // Evitar interferencia con botones/filtros
-      if (e.target.closest('button, [role="button"], .filter-tab')) return;
-      e.stopPropagation();
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target)) {
-        if (selectedId !== 'ALL' && typeof onSelect === 'function') onSelect('ALL');
-      }
-    };
-    // Prefer mousedown + click vs touchstart to avoid consuming the first
-    // touch event on mobile which can cause a double-tap UX.
-    document.addEventListener('mousedown', handleOutside);
-    document.addEventListener('click', handleOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleOutside);
-      document.removeEventListener('click', handleOutside);
-    };
-  }, [selectedId, onSelect]);
+  // Eliminado para prevenir problemas de doble toque en móvil.
+  // La funcionalidad de clic exterior para resetear el filtro queda desactivada.
 
   const handleBackgroundClick = (e) => {
     // Click blank chart area (not a line) -> reset
