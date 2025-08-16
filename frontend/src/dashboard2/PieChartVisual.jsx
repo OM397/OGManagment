@@ -50,36 +50,33 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
     };
   }, [hoveredIndex]);
 
-  // Desfiltrar al hacer click en cualquier parte de la página SOLO si el filtro viene del gráfico
+  // Handles clicks outside the component to deselect the active pie slice.
+  // This is a robust and standard implementation for "click outside" functionality.
   useEffect(() => {
-    const handleDocClick = (e) => {
-      // Skip if not from chart selection
-      if (selectedId === 'ALL' || selectionSource !== 'chart') return;
-
-      // Improved mobile-friendly target detection
-      const target = e.target;
-      const isInteractive = target.closest('button, [role="button"], .filter-tab, input, select, textarea, [tabindex], a') ||
-                           target.onclick ||
-                           target.getAttribute('onclick') ||
-                           target.matches && target.matches('button, input, select, textarea, a, [role="button"]');
-      
-      if (isInteractive) return;
-
-      // Only deselect if clicking outside interactive elements
+    const handleOutsideClick = (event) => {
+      // If the click is inside the chart's container, do nothing.
+      if (containerRef.current && containerRef.current.contains(event.target)) {
+        return;
+      }
+      // If the click is outside, deselect by calling onSelect with 'ALL'.
       if (typeof onSelect === 'function') {
         onSelect('ALL');
       }
     };
 
+    // Only attach the listener when a slice is selected from the chart.
     if (selectedId !== 'ALL' && selectionSource === 'chart') {
-      // Use passive listeners and add touchend for better mobile support
-      const options = { passive: true, capture: true };
-      document.addEventListener('click', handleDocClick, options);
-      document.addEventListener('touchend', handleDocClick, options);
-      
+      // Use a timeout to ensure this listener is added after the click event 
+      // that triggered the selection has completed. This prevents an immediate deselect.
+      const timer = setTimeout(() => {
+        // Listen on the bubble phase (default) to avoid interfering with other components' click handlers.
+        // We only listen for 'click' to avoid double-event issues on mobile (touchend + click).
+        document.addEventListener('click', handleOutsideClick);
+      }, 0);
+
       return () => {
-        document.removeEventListener('click', handleDocClick, { capture: true });
-        document.removeEventListener('touchend', handleDocClick, { capture: true });
+        clearTimeout(timer);
+        document.removeEventListener('click', handleOutsideClick);
       };
     }
   }, [selectedId, selectionSource, onSelect]);

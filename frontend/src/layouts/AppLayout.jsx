@@ -49,7 +49,7 @@ export default function AppLayout({
   }, [setSelectedView]);
 
   return (
-  <div className={`bg-gray-50 min-h-screen ${sidebarOpen ? 'sidebar-open' : ''}`}>
+  <div className={`bg-gray-50 min-h-screen ${sidebarOpen ? 'touch-none' : ''}`}>
     <div className="flex min-h-screen">
       <Sidebar 
         selected={selectedView}
@@ -66,21 +66,12 @@ export default function AppLayout({
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 z-30 lg:hidden"
-          onTouchEnd={e => {
-            e.preventDefault();
-            e.stopPropagation();
-            setSidebarOpen(false);
-          }}
-          onClick={e => {
-            if (e.detail === 0) return;
-            e.stopPropagation();
-            setSidebarOpen(false);
-          }}
+          onClick={() => setSidebarOpen(false)}
         />
       )}
       
   {/* Main content area */}
-  <div className="flex-1 flex flex-col min-w-0 pb-6 relative z-10">
+  <div className="flex-1 flex flex-col min-w-0 pb-6">
         <Topbar 
           user={user}
           onLogout={onLogout}
