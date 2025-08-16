@@ -118,18 +118,12 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
   );
 
   const handleClick = (data, e) => {
-    // Prevent event bubbling to avoid conflicts
-    if (e) {
-      e.stopPropagation();
-    }
-    
     if (data?.payload?.id && typeof onSelect === 'function') {
       onSelect(data.payload.id);
     }
   };
 
   const handleBackgroundClick = (e) => {
-    // Only trigger if clicking directly on the background container
     if (e.target === e.currentTarget && typeof onSelect === 'function') {
       onSelect('ALL');
     }

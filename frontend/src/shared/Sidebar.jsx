@@ -31,9 +31,8 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
 
   return (
     <>
-  {/* Overlay para móvil eliminado. Ahora solo AppLayout.jsx lo gestiona. */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-full sm:w-72 sm:min-w-[18rem] sm:max-w-[18rem] shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm transform transition-transform duration-300 ease-in-out lg:transform-none ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-full sm:w-72 sm:min-w-[18rem] sm:max-w-[18rem] shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm transform transition-transform duration-300 ease-in-out lg:transform-none ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{ touchAction: 'manipulation' }}
       >
         <div>
@@ -48,7 +47,6 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
           <nav className="px-2 md:px-3 py-4 space-y-1">
             {navItems.map(({ name, label, icon }) => {
               const isActive = selected === name;
-              // Mostrar AnimatedNumber para Investments y Assets
               let animatedValue = null;
               if (name === 'Net Worth') animatedValue = totalCurrent;
               if (name === 'Assets') animatedValue = totalAssets;

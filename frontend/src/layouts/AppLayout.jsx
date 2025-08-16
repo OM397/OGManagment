@@ -49,7 +49,7 @@ export default function AppLayout({
   }, [setSelectedView]);
 
   return (
-  <div className="bg-gray-50 min-h-screen">
+  <div className={`bg-gray-50 min-h-screen ${sidebarOpen ? 'sidebar-open' : ''}`}>
     <div className="flex min-h-screen">
       <Sidebar 
         selected={selectedView}
@@ -58,41 +58,34 @@ export default function AppLayout({
         marketData={marketData}
         isOpen={sidebarOpen}
         onClose={() => {
-      //    console.log('Sidebar onClose called. sidebarOpen antes:', sidebarOpen);
           setSidebarOpen(false);
         }}
-        className="border-4 border-green-500"
       />
       
       {/* Overlay for mobile when sidebar is open */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-20 lg:hidden"
-          style={{ pointerEvents: 'auto' }}
+          className="fixed inset-0 bg-black bg-opacity-40 z-30 lg:hidden"
           onTouchEnd={e => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('[AppLayout] Overlay touched. sidebarOpen antes:', sidebarOpen);
             setSidebarOpen(false);
           }}
           onClick={e => {
-            // Only handle click if not from touch
-            if (e.detail === 0) return; // Skip programmatic clicks
+            if (e.detail === 0) return;
             e.stopPropagation();
-            console.log('[AppLayout] Overlay clicked. Event:', e.type, 'sidebarOpen antes:', sidebarOpen);
             setSidebarOpen(false);
           }}
         />
       )}
       
   {/* Main content area */}
-  <div className="flex-1 flex flex-col min-w-0 pb-6">
+  <div className="flex-1 flex flex-col min-w-0 pb-6 relative z-10">
         <Topbar 
           user={user}
           onLogout={onLogout}
           onReload={onReload}
           onToggleSidebar={handleToggleSidebar}
-          menuButtonClassName="z-50"
         />
         {/* Centered, responsive wrapper: base constrained, wider on xl, full on ultra-wide */}
         <div className="flex-1 w-full">
