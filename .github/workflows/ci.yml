@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install backend deps
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run backend tests
+        env:
+          JWT_SECRET: test-secret
+        run: |
+          cd backend
+          npm test
+
+      - name: Install frontend deps
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Lint backend
+        run: |
+          cd backend
+          npx eslint . || true
+
+      - name: Lint frontend
+        run: |
+          cd frontend
+          npx eslint . || true

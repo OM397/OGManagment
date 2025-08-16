@@ -1,0 +1,19 @@
+[
+  {"id": "0P00011HBM.F", "name": "Vanguard Glb Stk Idx Ins Pl € Acc", "type": "stock", "initialQty": 15.87},
+  {"id": "IGLN.L", "name": "iShares Physical Gold ETC (IGLN.L)", "type": "stock", "initialQty": 51},
+  {"id": "GDX.L", "name": "VanEck Gold Miners UCITS ETF (GDX.L)", "type": "stock", "initialQty": 50},
+  {"id": "IBCX.AS", "name": "iShares € Corp Bond Large Cap UCITS ETF EUR (Dist) (IBCX.AS)", "type": "stock", "initialQty": 9},
+  {"id": "QQQ", "name": "Nasdaq", "type": "stock", "initialQty": 3, "conversionRate": 0.92},
+  {"id": "ARXK.DE", "name": "ARK Innovation UCITS ETF USD Acc ETF", "type": "stock", "initialQty": 37},
+  {"id": "IWMO.L", "name": "iShares Edge MSCI World Momentum Factor UCITS ETF (Acc)", "type": "stock", "initialQty": 13},
+  {"id": "SMH.L", "name": "VanEck Semiconductor UCITS ETF", "type": "stock", "initialQty": 31},
+  {"id": "LAR.TO", "name": "Lithium Argentina AG", "type": "stock", "initialQty": 301},
+  {"id": "NVDA", "name": "NVIDIA Corporation", "type": "stock", "initialQty": 2, "conversionRate": 0.92, "currency": "USD"},
+  {"id": "0P00011HBK.F", "name": "Vanguard U.S. 500 Stk Idx Ins Pl € Acc", "type": "stock", "initialQty": 9.344465115},
+  {"id": "0P00011HBL.F", "name": "Vanguard €pean Stk Idx Ins Pl € Acc", "type": "stock", "initialQty": 11.18274569},
+  {"id": "0P00011HBQ.F", "name": "Vanguard Em Mkts Stk Idx Ins Pl € Acc", "type": "stock", "initialQty": 8.677869232},
+  {"id": "BTC", "name": "BTC", "type": "crypto", "initialQty": 0.02337991},
+  {"id": "XRP", "name": "XRP", "type": "crypto", "initialQty": 156.662155},
+  {"id": "Official Trump", "name": "Official Trump", "type": "crypto", "initialQty": 35.382121},
+  {"id": "ETH", "name": "ETH", "type": "crypto", "initialQty": 0.1399669}
+]

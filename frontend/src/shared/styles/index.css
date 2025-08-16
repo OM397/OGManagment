@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global compact scale (90%) to achieve subtle zoom-out without browser scaling */
+/* Compact scale utility. Apply by adding class 'compact-scale' to <html> or a high-level wrapper. */
+.compact-scale { font-size: 85%; }
+.compact-scale h1 { font-size: 1.05rem; }
+.compact-scale h2 { font-size: 0.98rem; }
+.compact-scale h3 { font-size: 0.9rem; }
+
+/* Strong zoom-out (transform based) */
+.zoom-scale-75 {
+	transform: scale(0.75);
+	transform-origin: top left;
+	width: calc(100% / 0.75); /* compensate so scaled content spans viewport */
+}
+
+/* Alternate 80% if needed quickly */
+.zoom-scale-80 {
+	transform: scale(0.8);
+	transform-origin: top left;
+	width: calc(100% / 0.8);
+}
+
+/* Root font-size zoom (replaces transform scaling to avoid bottom gap) */
+:root { --app-zoom: 0.80; }
+html { font-size: 16px; }
+@media (min-width: 768px) {
+	html { font-size: calc(16px * var(--app-zoom)); }
+}
+html[data-zoom="80"] { --app-zoom: 0.80; }
+html[data-zoom="82"] { --app-zoom: 0.82; }
+html[data-zoom="85"] { --app-zoom: 0.85; }
+html[data-zoom="90"] { --app-zoom: 0.90; }
+html[data-zoom="95"] { --app-zoom: 0.95; }
+/* Backward compatibility: neutralize old classes if still present */
+body { overflow-x: hidden; background-color: #f9fafb; min-height:100vh; }
+
+/* Fast fade animation for responsive tooltips */
+@keyframes fadeInFast { from { opacity: 0 } to { opacity: 1 } }
+.animate-fade-in-fast { animation: fadeInFast 80ms ease-out; }
+
+@keyframes pulseSlow { 0%,100% { opacity: 0.45 } 50% { opacity: 0.8 } }
+.animate-pulse-slow { animation: pulseSlow 2.4s ease-in-out infinite; }

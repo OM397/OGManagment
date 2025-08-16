@@ -1,0 +1,215 @@
+// 📁 frontend/src/shared/services/apiService.js
+import axios from 'axios';
+import { API_BASE } from '../config';
+
+// 🔧 Crear instancia de axios con configuración base
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true, // Importante para enviar cookies httpOnly
+  timeout: 30000,
+});
+
+// Nota: ya no persistimos accessToken en sessionStorage para reducir superficie de ataque.
+// Si necesitas pruebas locales con Authorization, ajusta manualmente aquí de forma temporal.
+
+// 🔄 Estado de renovación para evitar múltiples intentos simultáneos
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
+// 📤 Interceptor de respuesta para manejo automático de tokens
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Si es error 401 y el request no es de auth, intentar renovar token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const errorData = error.response.data;
+      
+      // Verificar si es un error de token expirado que requiere refresh
+      if (errorData?.code === 'TOKEN_EXPIRED' && errorData?.requiresRefresh) {
+        
+        if (isRefreshing) {
+          // Si ya estamos renovando, agregar a la cola
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(() => {
+            return apiClient(originalRequest);
+          }).catch(err => {
+            return Promise.reject(err);
+          });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          // Intentar renovar el token
+          await apiClient.post('/refresh');
+          
+          // Si la renovación fue exitosa, procesar la cola
+          processQueue(null);
+          isRefreshing = false;
+          
+          // Reintentar la petición original
+          return apiClient(originalRequest);
+          
+        } catch (refreshError) {
+          // Si la renovación falla, limpiar sesión
+          processQueue(refreshError);
+          isRefreshing = false;
+          
+          // Redireccionar al login
+          sessionStorage.clear();
+          localStorage.clear();
+          window.location.href = '/';
+          
+          return Promise.reject(refreshError);
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// 🔒 Funciones de autenticación
+export const authAPI = {
+  /**
+   * Iniciar sesión
+   */
+  async login(username, password) {
+    const response = await apiClient.post('/login', { username, password });
+    const data = response.data;
+    // En dev podrías opcionalmente inyectar Authorization header, pero NO lo guardamos en storage.
+    if (data?.accessToken) {
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+    }
+    return data;
+  },
+
+  /**
+   * Registrar usuario
+   */
+  async register(email) {
+    const response = await apiClient.post('/register', { email });
+    return response.data;
+  },
+
+  /**
+   * Solicitar regeneración de contraseña (flujo olvidé mi contraseña)
+   */
+  async forgotPassword(email) {
+    const response = await apiClient.post('/forgot-password', { email });
+    return response.data;
+  },
+
+  /**
+   * Cerrar sesión
+   */
+  async logout() {
+    try {
+      await apiClient.post('/logout');
+    } catch (error) {
+  // ...existing code...
+    }
+    
+    // Limpiar storage independientemente del resultado
+  // Limpieza agresiva de cualquier rastro previo (aunque ya no guardamos tokens/username)
+  try { sessionStorage.clear(); localStorage.clear(); } catch (_) {}
+  delete apiClient.defaults.headers.common['Authorization'];
+  },
+
+  /**
+   * Cerrar todas las sesiones
+   */
+  async logoutAll() {
+    try {
+      await apiClient.post('/logout-all');
+    } catch (error) {
+  // ...existing code...
+    }
+    
+  try { sessionStorage.clear(); localStorage.clear(); } catch (_) {}
+  delete apiClient.defaults.headers.common['Authorization'];
+  },
+
+  /**
+   * Obtener sesiones activas
+   */
+  async getSessions() {
+    const response = await apiClient.get('/sessions');
+    return response.data.sessions;
+  },
+
+  /**
+   * Cerrar sesión específica
+   */
+  async logoutSession(sessionId) {
+    const response = await apiClient.delete(`/sessions/${sessionId}`);
+    return response.data;
+  },
+
+  /**
+   * Verificar estado de autenticación
+   */
+  async checkAuth() {
+    try {
+      const response = await apiClient.get('/user');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
+// 📊 Funciones de API general
+export const dataAPI = {
+  /**
+   * Obtener datos del usuario
+   */
+  async getUserData() {
+    const response = await apiClient.get('/user-data');
+    return response.data;
+  },
+
+  /**
+   * Obtener tickers
+   */
+  async getTickers() {
+    const response = await apiClient.get('/tickers');
+    return response.data;
+  },
+
+  /**
+   * Obtener historial
+   */
+  async getHistory(params = {}) {
+    const response = await apiClient.get('/history', { params });
+    return response.data;
+  },
+
+  /**
+   * Análisis de inversión
+   */
+  async analyzeInvestment(data) {
+    const response = await apiClient.post('/investments/analyze', data);
+    return response.data;
+  }
+};
+
+
+// Exportar cliente por defecto
+export default apiClient;

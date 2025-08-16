@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  kubera-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./backend/.env  # Usa un .env local no versionado (ver .env.example)
+    environment:
+      PORT: "3001"
+      JWT_SECRET: ${JWT_SECRET}
+      MONGODB_URI: ${MONGODB_URI}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY}
+      TWELVE_API_KEY: ${TWELVE_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      REDIS_URL: ${REDIS_URL}
+      RUN_SCHEDULER: "false"
+    depends_on:
+      - mongodb
+      - redis
+
+  kubera-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "server.js"]
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: "3002" # worker can use different port (not exposed) but still required
+      RUN_SCHEDULER: "true"
+      MONGODB_URI: ${MONGODB_URI}
+      JWT_SECRET: ${JWT_SECRET}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY}
+      TWELVE_API_KEY: ${TWELVE_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      - mongodb
+      - redis
+    ports:
+      - "3002:3002"
+
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+volumes:
+  mongo_data:

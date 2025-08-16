@@ -1,0 +1,17 @@
+{
+  "name": "kubera-mvp-optimized",
+  "version": "2.0.0",
+  "description": "Portfolio tracker with optimized API system",
+  "dependencies": {
+    "@react-spring/web": "^9.7.5",
+    "axios": "^1.8.4",
+    "bcryptjs": "^3.0.2",
+    "mongoose": "^8.17.1",
+    "node-fetch": "^2.7.0",
+    "recharts": "^2.15.2",
+    "yahoo-finance2": "^2.13.3"
+  },
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}
