@@ -7,6 +7,7 @@ const { sendEmail } = require('./utils/emailService');
 require('dotenv').config();
 
 const marketData = require('./services/unifiedMarketDataService');
+const redis = require('./redisClient');
 
 function calculateIRRWithTimes(flows, guess = 0.1, maxIterations = 100, tolerance = 1e-6) {
   let rate = guess;
@@ -35,9 +36,19 @@ async function sendWeeklySummary() {
   let marketSummary = null;
   try {
     const { buildSummary } = require('./controllers/marketSummaryController');
-    marketSummary = await buildSummary();
+  // Forzar reconstrucción para asegurar datos frescos en el email
+  marketSummary = await buildSummary({ force: true });
+    // Si por algún motivo viene vacío, intentar cargar el último snapshot bueno
+    if (!marketSummary?.assets?.length) {
+      const last = await redis.get('marketSummary:lastGood');
+      if (last) marketSummary = JSON.parse(last);
+    }
   } catch (e) {
-    // Error al construir Market Summary para el email
+    // Error al construir Market Summary para el email -> intentar cargar el último snapshot bueno
+    try {
+      const last = await redis.get('marketSummary:lastGood');
+      if (last) marketSummary = JSON.parse(last);
+    } catch (_) {}
   }
 
   const formatPct = v => v == null ? '-' : (v * 100).toFixed(2) + '%';

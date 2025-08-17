@@ -11,13 +11,18 @@ const ValidationMiddleware = require('../middleware/validation');
 
 const router = express.Router();
 
-const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN; // e.g., .capitaltracker.app
+// Host-only cookies (no domain) are more reliable on iOS/Safari/WebViews.
+// In production use __Host- prefix (requires Secure + Path=/ and no Domain).
+const IS_PROD = process.env.NODE_ENV === 'production';
+const ACCESS_COOKIE_NAME = IS_PROD ? '__Host-accessToken' : 'accessToken';
+const REFRESH_COOKIE_NAME = IS_PROD ? '__Host-refreshToken' : 'refreshToken';
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-  // Only set domain in production when provided to avoid local cookie issues
-  ...(process.env.NODE_ENV === 'production' && COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {})
+  secure: IS_PROD,
+  sameSite: IS_PROD ? 'None' : 'Lax',
+  path: '/'
+  // Note: no domain on purpose (host-only)
 };
 
 const ACCESS_COOKIE_OPTIONS = {
@@ -111,16 +116,16 @@ router.post('/register',
   try { await TokenService.storeSession(newUser.publicId, tokenId, deviceInfo); } catch (e) { /* Error storeSession autoLogin */ }
         body = { ...body, role: 'user', tokenId, autoLogin: true };
         return res
-          .cookie('accessToken', accessToken, ACCESS_COOKIE_OPTIONS)
-          .cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS)
+          .cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
+          .cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
           .status(201)
           .json(body);
       }
 
       // Asegurar que no queden cookies previas (si el navegador tenía sesión de otro usuario)
       res
-        .clearCookie('accessToken', COOKIE_OPTIONS)
-        .clearCookie('refreshToken', COOKIE_OPTIONS)
+        .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
+        .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
         .status(201)
         .json(body);
     } catch (err) {
@@ -191,8 +196,8 @@ router.post('/login',
     }
 
     res
-      .cookie('accessToken', accessToken, ACCESS_COOKIE_OPTIONS)
-      .cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS)
+      .cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
+      .cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
       .status(200)
   .json({ success: true, uid: user.publicId, role: user.role, tokenId, lastLogin: user.lastLogin, ...(process.env.NODE_ENV !== 'production' ? { accessToken } : {}) });
   } catch (err) {
@@ -202,7 +207,7 @@ router.post('/login',
 });
 
 router.post('/logout', async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] || req.cookies.refreshToken || req.cookies['__Host-refreshToken'];
   
   try {
     if (refreshToken) {
@@ -216,8 +221,8 @@ router.post('/logout', async (req, res) => {
   }
 
   res
-    .clearCookie('accessToken', COOKIE_OPTIONS)
-    .clearCookie('refreshToken', COOKIE_OPTIONS)
+  .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
+  .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
   .clearCookie('token', COOKIE_OPTIONS)
     .status(200)
     .json({ success: true, message: 'Sesión cerrada correctamente.' });
@@ -225,7 +230,7 @@ router.post('/logout', async (req, res) => {
 
 // 🔄 Renovar token de acceso usando refresh token
 router.post('/refresh', refreshLimiter, async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] || req.cookies.refreshToken || req.cookies['__Host-refreshToken'];
 
   if (!refreshToken) {
     return res.status(401).json({ 
@@ -269,8 +274,8 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
     }
 
     res
-      .cookie('accessToken', accessToken, ACCESS_COOKIE_OPTIONS)
-      .cookie('refreshToken', newRefreshToken, REFRESH_COOKIE_OPTIONS)
+      .cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
+      .cookie(REFRESH_COOKIE_NAME, newRefreshToken, REFRESH_COOKIE_OPTIONS)
       .status(200)
       .json({
         success: true,
@@ -280,8 +285,8 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
   } catch (err) {
   // ...existing code...
     res
-      .clearCookie('accessToken', COOKIE_OPTIONS)
-      .clearCookie('refreshToken', COOKIE_OPTIONS)
+      .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
+      .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
   .clearCookie('token', COOKIE_OPTIONS)
       .status(401)
       .json({ 
@@ -293,7 +298,7 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
 
 // 📱 Obtener sesiones activas del usuario
 router.get('/sessions', async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] || req.cookies.refreshToken || req.cookies['__Host-refreshToken'];
 
   if (!refreshToken) {
     return res.status(401).json({ error: 'No autenticado.' });
@@ -316,8 +321,8 @@ router.get('/sessions', async (req, res) => {
     });
   } catch (err) {
     res
-      .clearCookie('accessToken', COOKIE_OPTIONS)
-      .clearCookie('refreshToken', COOKIE_OPTIONS)
+      .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
+      .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
       .clearCookie('token', COOKIE_OPTIONS)
       .status(401)
       .json({ error: 'Token inválido.' });
@@ -326,7 +331,7 @@ router.get('/sessions', async (req, res) => {
 
 // 🚫 Cerrar sesión específica
 router.delete('/sessions/:sessionId', async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] || req.cookies.refreshToken || req.cookies['__Host-refreshToken'];
   const { sessionId } = req.params;
 
   if (!refreshToken) {
@@ -352,7 +357,7 @@ router.delete('/sessions/:sessionId', async (req, res) => {
 
 // 🚫 Cerrar todas las sesiones
 router.post('/logout-all', async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] || req.cookies.refreshToken || req.cookies['__Host-refreshToken'];
 
   if (!refreshToken) {
     return res.status(401).json({ error: 'No autenticado.' });
@@ -367,8 +372,8 @@ router.post('/logout-all', async (req, res) => {
     }
     
     res
-      .clearCookie('accessToken', COOKIE_OPTIONS)
-      .clearCookie('refreshToken', COOKIE_OPTIONS)
+      .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
+      .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
       .clearCookie('token', COOKIE_OPTIONS)
       .status(200)
       .json({
@@ -377,8 +382,8 @@ router.post('/logout-all', async (req, res) => {
       });
   } catch (err) {
     res
-      .clearCookie('accessToken', COOKIE_OPTIONS)
-      .clearCookie('refreshToken', COOKIE_OPTIONS)
+      .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
+      .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
       .clearCookie('token', COOKIE_OPTIONS)
       .status(401)
       .json({ error: 'Token inválido.' });

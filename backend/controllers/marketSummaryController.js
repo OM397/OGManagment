@@ -9,6 +9,7 @@ const STOCKS  = [ 'AAPL','MSFT','NVDA','QQQ','SPY' ];
 // Refresh every 12h (2 veces al día)
 const REFRESH_MS = 12 * 60 * 60 * 1000;
 const CACHE_KEY = 'marketSummary:v1';
+const LAST_GOOD_KEY = 'marketSummary:lastGood';
 
 async function buildSummary(options = {}) {
   const tickers = [
@@ -52,7 +53,8 @@ async function buildSummary(options = {}) {
       if (perf?.changes) {
         ['7d','30d','1y'].forEach(k => { if (perf.changes[k] != null) a.changes[k] = perf.changes[k]; });
       }
-      // Fallback: derive 7d if missing using history (added because some assets lacked 7d change from provider)
+      // Fallbacks: derive missing intervals using history when providers omit them
+      // 7d
       if (a.changes['7d'] == null) {
         try {
           const h = await fetchHistory(a.id.toLowerCase(), a.type, 7);
@@ -60,6 +62,30 @@ async function buildSummary(options = {}) {
           if (hist.length > 3) {
             const first = hist[0].price; const last = hist[hist.length-1].price;
             if (first > 0 && last > 0) a.changes['7d'] = (last/first) - 1;
+          }
+        } catch {}
+      }
+      // 30d
+      if (a.changes['30d'] == null) {
+        try {
+          const h30 = await fetchHistory(a.id.toLowerCase(), a.type, 30);
+          const hist30 = h30?.history || [];
+          if (hist30.length > 3) {
+            const f30 = hist30[0].price; const l30 = hist30[hist30.length-1].price;
+            if (f30 > 0 && l30 > 0) a.changes['30d'] = (l30/f30) - 1;
+          }
+        } catch {}
+      }
+      // 1y (365d)
+      if (a.changes['1y'] == null) {
+        try {
+          const h365 = await fetchHistory(a.id.toLowerCase(), a.type, 365);
+          const hist365 = h365?.history || [];
+          if (hist365.length > 3) {
+            const f365 = hist365[0].price; const l365 = hist365[hist365.length-1].price;
+            if (f365 > 0 && l365 > 0) {
+              a.changes['1y'] = (l365 / f365) - 1;
+            }
           }
         } catch {}
       }
@@ -80,22 +106,46 @@ async function buildSummary(options = {}) {
 exports.getMarketSummary = async (req, res) => {
   const force = req.query.force === '1';
   try {
+    let cachedParsed = null;
+    // 1) If not forced, try to serve fresh cache immediately
     if (!force) {
       const cached = await redis.get(CACHE_KEY);
       if (cached) {
-        const parsed = JSON.parse(cached);
-        // Serve cache if still fresh
-        if (Date.now() < parsed.nextUpdate) {
+        cachedParsed = JSON.parse(cached);
+        if (Date.now() < cachedParsed.nextUpdate) {
           res.set('Cache-Control', 'public, max-age=300');
-          return res.json(parsed);
+          res.set('X-Data-Source', 'cache');
+          return res.json(cachedParsed);
         }
       }
     }
 
-  const summary = await buildSummary({ force });
-    await redis.set(CACHE_KEY, JSON.stringify(summary), 'PX', REFRESH_MS);
-    res.set('Cache-Control', 'public, max-age=300');
-    res.json(summary);
+    // 2) Rebuild (forced or stale cache). On success, update cache and last-good, then return
+    try {
+      const summary = await buildSummary({ force });
+      if (!summary?.assets?.length) throw new Error('empty_summary');
+      await redis.set(CACHE_KEY, JSON.stringify(summary), 'PX', REFRESH_MS);
+      // Keep a durable last-good snapshot without TTL (or you could set a long EX)
+      await redis.set(LAST_GOOD_KEY, JSON.stringify(summary));
+      res.set('Cache-Control', 'public, max-age=300');
+      res.set('X-Data-Source', 'live');
+      return res.json(summary);
+    } catch (liveErr) {
+      // 3) Live rebuild failed → fallback to stale cache or last-good snapshot
+      if (cachedParsed) {
+        res.set('Cache-Control', 'public, max-age=60');
+        res.set('X-Data-Source', 'cache-stale');
+        return res.json(cachedParsed);
+      }
+      const lastGood = await redis.get(LAST_GOOD_KEY);
+      if (lastGood) {
+        const parsedLast = JSON.parse(lastGood);
+        res.set('Cache-Control', 'public, max-age=60');
+        res.set('X-Data-Source', 'last-good');
+        return res.json(parsedLast);
+      }
+      throw liveErr;
+    }
   } catch (e) {
     console.error('❌ market summary build failed:', e.message);
     res.status(500).json({ error: 'market_summary_failed', message: e.message });
