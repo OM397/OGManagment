@@ -10,7 +10,7 @@ const STOCKS  = [ 'AAPL','MSFT','NVDA','QQQ','SPY' ];
 const REFRESH_MS = 12 * 60 * 60 * 1000;
 const CACHE_KEY = 'marketSummary:v1';
 
-async function buildSummary() {
+async function buildSummary(options = {}) {
   const tickers = [
     ...CRYPTOS.map(id => ({ id, type: 'crypto' })),
     ...STOCKS.map(id => ({ id, type: 'stock' }))
@@ -25,12 +25,14 @@ async function buildSummary() {
   const pushRow = (id, type, label) => {
     const key = id.toLowerCase();
     const priceObj = type === 'crypto' ? quotes.cryptos[key] : quotes.stocks[key];
+    const marketCapStockFallback = priceObj?.marketCapEur ?? priceObj?.marketCap ?? null;
     assets.push({
       id,
       label,
       type,
       price: priceObj?.eur ?? null,
-      marketCap: type==='crypto' ? priceObj?.marketCap ?? null : (priceObj?.marketCapEur ?? null),
+      priceMeta: priceObj ? { source: priceObj.source || null, provider: priceObj.provider || null } : null,
+      marketCap: type==='crypto' ? (priceObj?.marketCap ?? null) : marketCapStockFallback,
       changes: {}
     });
   };
@@ -46,7 +48,7 @@ async function buildSummary() {
   // Sequential performance fetch (gentle rate usage)
   for (const a of assets) {
     try {
-      const perf = await fetchPerformanceMetrics(a.id, a.type, { nocache: false });
+  const perf = await fetchPerformanceMetrics(a.id, a.type, { nocache: !!options.force });
       if (perf?.changes) {
         ['7d','30d','1y'].forEach(k => { if (perf.changes[k] != null) a.changes[k] = perf.changes[k]; });
       }
@@ -90,7 +92,7 @@ exports.getMarketSummary = async (req, res) => {
       }
     }
 
-    const summary = await buildSummary();
+  const summary = await buildSummary({ force });
     await redis.set(CACHE_KEY, JSON.stringify(summary), 'PX', REFRESH_MS);
     res.set('Cache-Control', 'public, max-age=300');
     res.json(summary);

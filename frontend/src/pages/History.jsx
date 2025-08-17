@@ -313,6 +313,7 @@ function MarketSummary() {
         id: a.id,
         label: a.label || a.id,
         price: a.price,
+        priceMeta: a.priceMeta || null,
         marketCap: a.marketCap,
         p7d: a.changes?.['7d'],
         p30d: a.changes?.['30d'],
@@ -352,7 +353,16 @@ function MarketSummary() {
                   <span className="text-gray-700 font-medium">{r.label}</span>
                   <span className="ml-1 text-[10px] text-gray-400">{r.segment}</span>
                 </td>
-                <td className="py-2 px-3 text-right font-medium tabular-nums">{r.price!=null? formatSummaryPrice(r.id, r.price) : '–'}</td>
+                <td className="py-2 px-3 text-right font-medium tabular-nums">
+                  {r.price!=null? (
+                    <div className="flex flex-col items-end">
+                      <div>{formatSummaryPrice(r.id, r.price)}</div>
+                      {r.priceMeta?.provider && (
+                        <span className="text-[10px] text-gray-400">{r.priceMeta.source==='cache'?'cache / ':''}{r.priceMeta.provider}</span>
+                      )}
+                    </div>
+                  ) : '–'}
+                </td>
                 <td className="py-2 px-3 text-right tabular-nums text-gray-700">{r.marketCap!=null? formatMarketCap(r.marketCap): '–'}</td>
                 <PctCell value={r.p7d} />
                 <PctCell value={r.p30d} />

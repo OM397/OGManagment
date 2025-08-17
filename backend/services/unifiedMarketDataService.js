@@ -215,9 +215,9 @@ async function fetchPrice(id, type) {
 
 // OPTIMIZED HISTORY FETCHING WITH RATE LIMITING
 async function fetchHistory(id, type, days = 30) {
-  // Clamp days to sane bounds
+  // Clamp days to sane bounds (allow 1 day minimum for 1d change calculations)
   const originalDays = days;
-  days = Math.min(Math.max(parseInt(days, 10) || 30, 7), 365);
+  days = Math.min(Math.max(parseInt(days, 10) || 30, 1), 365);
   console.log('📉 Fetching history for:', id, '| Type:', type, '| Days:', days, '(requested:', originalDays, ')');
   const cacheKey = `history:${type}:${id}:${days}`;
 
@@ -544,9 +544,16 @@ async function getCurrentQuotes(tickers) {
       const fxRates = await getFXRates([...currencies]);
       for (const [ticker, data] of Object.entries(result.stocks)) {
         if (data.currency && data.currency !== 'EUR' && fxRates[data.currency]) {
-          data.eur = +(data.rawPrice / fxRates[data.currency]).toFixed(4);
+          const rate = fxRates[data.currency];
+          data.eur = +(data.rawPrice / rate).toFixed(4);
+          if (data.marketCap != null && !isNaN(data.marketCap)) {
+            data.marketCapEur = +(data.marketCap / rate).toFixed(0);
+          }
         } else if (data.currency === 'EUR') {
           data.eur = data.rawPrice;
+          if (data.marketCap != null && !isNaN(data.marketCap)) {
+            data.marketCapEur = data.marketCap;
+          }
         }
       }
     } catch (err) {
@@ -577,29 +584,43 @@ async function fetchPerformanceMetrics(id, type, options = {}) {
   }
 
   try {
-    // Get history for different periods to calculate performance
+    // Get history for different periods to calculate performance (fractional returns)
     const history30 = await fetchHistory(id, type, 30);
     const history7 = await fetchHistory(id, type, 7);
-    const history1 = await fetchHistory(id, type, 1);
+    const history2 = await fetchHistory(id, type, 2); // for 1d we need at least 2 data points
+    const history365 = await fetchHistory(id, type, 365);
 
     if (!history30?.history?.length) {
       return null;
     }
 
-    const current = history30.history[history30.history.length - 1]?.price;
-    const price30ago = history30.history[0]?.price;
-    const price7ago = history7?.history?.[0]?.price || price30ago;
-    const price1ago = history1?.history?.[0]?.price || current;
+    const last = arr => (arr && arr.length ? arr[arr.length - 1] : null);
+    const first = arr => (arr && arr.length ? arr[0] : null);
+    const calc = (past, now) => (past != null && now != null && past !== 0) ? ((now - past) / past) : null;
+
+    const last30 = last(history30.history)?.price;
+    const first30 = first(history30.history)?.price;
+
+    const last7 = last(history7?.history || [])?.price;
+    const first7 = first(history7?.history || [])?.price;
+
+    const h2 = history2?.history || [];
+    const prev1 = h2.length >= 2 ? h2[h2.length - 2].price : first(h2)?.price;
+    const curr1 = last(h2)?.price ?? last30;
+
+    const last365 = last(history365?.history || [])?.price ?? last30;
+    const first365 = first(history365?.history || [])?.price ?? first30;
 
     const changes = {
-      '1d': price1ago && current ? ((current - price1ago) / price1ago * 100) : 0,
-      '7d': price7ago && current ? ((current - price7ago) / price7ago * 100) : 0,
-      '30d': price30ago && current ? ((current - price30ago) / price30ago * 100) : 0
+      '1d': calc(prev1, curr1),
+      '7d': calc(first7, last7 ?? last30),
+      '30d': calc(first30, last30),
+      '1y': calc(first365, last365)
     };
 
     const result = normalizePerformanceResponse({
       changes,
-      sources: { '1d': 'history', '7d': 'history', '30d': 'history' },
+      sources: { '1d': 'history', '7d': 'history', '30d': 'history', '1y': 'history' },
       fetchedAt: new Date().toISOString(),
       provider: 'calculated'
     });
