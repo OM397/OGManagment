@@ -4,26 +4,28 @@ const MultiLineChartPanelByGroup = React.lazy(() => import('../dashboard2/MultiL
 import useCombinedHistoryByGroupDashboard2 from '../dashboard2/useCombinedHistoryByGroupDashboard2';
 import useCombinedHistoryTotalDashboard2 from '../dashboard2/useCombinedHistoryTotalDashboard2';
 const MultiLineChartPanelTotal = React.lazy(() => import('../dashboard2/MultiLineChartPanelTotal'));
-import useCombinedHistory from '../../hooks/useCombinedHistory';
 // 📊 Dashboard2 - Nueva página de gráficos
 import { useCategoryGroups } from '../shared/context/CategoryGroupsContext';
-import useMarketData from '../features/assets/useMarketData';
 import usePortfolioOverview from '../dashboard2/usePortfolioOverview';
 import useFilteredAssets from '../dashboard2/useFilteredAssets';
 import ChartTabs from '../features/history/ChartTabs';
 import AssetsSummary from '../features/assets/AssetsSummary';
 
-//import MultiLineChartPanelDashboard2 from '../dashboard2/MultiLineChartPanelDashboard2';
 import useCombinedHistoryDashboard2 from '../dashboard2/useCombinedHistoryDashboard2';
-//import { GRAYS } from '../dashboard2/constantsDashboard2';
 
 
 import PortfolioOverview from '../dashboard2/PortfolioOverview';
 import PieChartConnector from '../dashboard2/PieChartConnector';
+const PieChartByTypeConnector = React.lazy(() => import('../dashboard2/PieChartByTypeConnector'));
 
 
 
-export default function Dashboard2() {
+export default function Dashboard2({ categoryGroups: categoryGroupsProp, marketData: marketDataProp, exchangeRates: exchangeRatesProp }) {
+  // Nota de mantenimiento (móvil iOS):
+  // Tuvimos un bug de "doble toque" con Recharts al usar Tooltip/hover. Para depurar,
+  // habilita logs de touch con ?touchdebug=1. En Total/Grupos se desactivó interactividad;
+  // en el chart por Activo se usa overlay y tooltip de línea única.
+  // Si cambias la interactividad, verifica en dispositivos iOS reales.
   // Debug touch/click events when URL param touchdebug=1 is present
   const enableTouchDebug = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('touchdebug');
   React.useEffect(() => {
@@ -45,16 +47,16 @@ export default function Dashboard2() {
   }, []);
 
   // Traer datos del usuario y mercado
-  const { categoryGroups } = useCategoryGroups();
+  const { categoryGroups: categoryGroupsCtx } = useCategoryGroups();
+  const categoryGroups = categoryGroupsProp || categoryGroupsCtx;
   // Configuración API_BASE y aliases si es necesario
   const API_BASE = '/api';
   const cryptoAliases = {};
-  const { marketData, exchangeRates } = useMarketData(categoryGroups || {}, 0, { 
-    enableInterval: false  // Dashboard2 no necesita interval automático
-  });
+  // Usar marketData y exchangeRates provistos por InnerApp (con auto-refresh global)
+  const marketData = marketDataProp;
+  const exchangeRates = exchangeRatesProp;
   const { assets, totalCurrent, totalInitial } = usePortfolioOverview(categoryGroups, marketData);
-  // Hook antiguo para obtener los datos históricos igual que Dashboard.jsx
-  const { multiHistory: multiHistoryOld } = useCombinedHistory(assets, exchangeRates, 30);
+
 
   // Tabs para grupos y assets, usando solo los datos de assets (dashboard2)
   const groupNames = React.useMemo(() => {
@@ -65,32 +67,10 @@ export default function Dashboard2() {
     return Array.from(names);
   }, [assets]);
 
-  const groupTabs = React.useMemo(() => [
-    { id: 'ALL', label: 'Todos' },
-    ...groupNames.map(name => ({ id: `GROUP:${name}`, label: name }))
-  ], [groupNames]);
-
-  const assetTabs = React.useMemo(() => [
-    { id: 'ALL', label: 'Todos' },
-    ...assets.map(a => ({ id: a.id, label: a.nameShort || a.name }))
-  ], [assets]);
-
   // Estado de selección
   const [selectedId, setSelectedId] = React.useState('ALL');
   const [selectionSource, setSelectionSource] = React.useState('tabs');
-
-  // Handlers de selección
-  const handleGroupSelect = (id) => {
-    setSelectedId(id);
-  };
-  const handleAssetSelect = (id) => {
-    setSelectedId(id);
-  };
-
-  // Sincronizar selección desde el gráfico
-  const handleAssetSelectFromChart = (id) => {
-    setSelectedId(id);
-  };
+  const [evolutionView, setEvolutionView] = React.useState('total'); // 'total' o 'groups'
 
   // Filtrado de assets según selección (usa hook nuevo)
   const filteredAssets = useFilteredAssets(assets, selectedId);
@@ -101,7 +81,10 @@ export default function Dashboard2() {
     exchangeRates,
     days: 30,
     API_BASE,
-    cryptoAliases
+  cryptoAliases,
+  pollMs: 200000,
+  startupBurstCount: 2,
+  startupBurstSpacingMs: 20000
   });
   // Hook para histórico multi-línea por grupo
   // Pass multiHistory (with history arrays) so the chart is a pure summatory by group and date
@@ -115,13 +98,9 @@ export default function Dashboard2() {
 
   // Hook para histórico total (una sola línea)
   const multiHistoryTotal = useCombinedHistoryTotalDashboard2({ assets: multiHistory });
-//////////////////////////////////////////////////////////  console.log('Dashboard2.jsx - multiHistory:', multiHistory);
   // Usar el mismo tab que Assets (por defecto 'Investments')
   const activeTab = 'Investments';
-  // DEBUG VISUAL: Mostrar cómo llegan los datos de assets
-//  console.log('Dashboard2.jsx - assets:', assets);
-  // DEBUG VISUAL: Mostrar cómo llegan los datos de multiHistoryOld
-  //console.log('Dashboard2.jsx - multiHistoryOld:', multiHistoryOld);
+
   return (
     <div className="px-2 sm:px-4 py-3 sm:py-5 w-full max-w-none">
       {enableTouchDebug && (
@@ -174,65 +153,109 @@ export default function Dashboard2() {
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Dashboard de Gráficos</h1>
         <p className="text-sm sm:text-base text-gray-600 mb-2">Visualiza y analiza tu portafolio de inversiones</p>
-  <AssetsSummary initialData={categoryGroups} marketData={marketData} activeTab={activeTab} />
+        <AssetsSummary initialData={categoryGroups} marketData={marketData} activeTab={activeTab} />
       </div>
 
-      {/* Filtros para todos los tamaños de pantalla */}
-      <div className="mb-6">
-        <div className="flex flex-col gap-4 mb-4">
-          <ChartTabs
-            selectedId={selectedId}
-            userAssets={assets}
-            groupNames={groupNames}
-            onSelect={setSelectedId}
-          />
-        </div>
-        {/* Portfolio Overview solo en móvil aquí */}
-        <div className="block lg:hidden w-full overflow-x-auto">
-          <PortfolioOverview assets={filteredAssets} totalCurrent={totalCurrent} totalInitial={totalInitial} />
-        </div>
+      {/* Filtros Globales */}
+      <div className="mb-4 lg:mb-6">
+        <ChartTabs
+          selectedId={selectedId}
+          userAssets={assets}
+          groupNames={groupNames}
+          onSelect={setSelectedId}
+        />
       </div>
 
-      {/* Charts Grid */}
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
-  <div className="lg:col-span-2 flex flex-col h-full min-w-0">
-          <div className="mb-2">
-            <h4 className="text-sm font-semibold text-gray-700">Evolución total (una línea)</h4>
-          </div>
-          <div className="h-full flex-col bg-white rounded shadow-sm p-4 min-h-[300px] justify-center items-center">
-            {/* Gráfico de suma total */}
-            {multiHistoryTotal && multiHistoryTotal.length > 0 ? (
-              <Suspense fallback={<div className="text-gray-400">Cargando gráfico...</div>}>
-                <MultiLineChartPanelTotal data={multiHistoryTotal} height={320} />
+      {/* Fila 1: La Gran Foto - Resumen General y Distribución */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-4 lg:mb-6">
+        
+     
+     
+     
+        {/* Card: Resumen del Portafolio */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-4 lg:p-6">
+          <h2 className="text-base font-semibold text-gray-700 mb-2">Resumen del Portafolio</h2>
+          <PortfolioOverview assets={filteredAssets} />
+        </div>
+
+     
+     
+     
+     
+     
+        {/* Columna Derecha: Gráficos de Distribución */}
+        <div className="lg:col-span-1 flex flex-col gap-4 lg:gap-6">
+          {/* Card: Distribución por Tipo */}
+          <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full">
+            <h4 className="text-base font-semibold text-gray-700 mb-2">Distribución por Tipo</h4>
+            <div className="flex-grow flex justify-center items-center min-h-[200px]">
+              <Suspense fallback={<div className="text-gray-400">Cargando...</div>}>
+                <PieChartByTypeConnector
+                  assets={assets}
+                  totalCurrent={totalCurrent}
+                />
               </Suspense>
-            ) : (
-              <span className="text-gray-400">Sin datos históricos para mostrar.</span>
-            )}
+            </div>
           </div>
-        </div>
-  <div className="h-full flex flex-col bg-white rounded shadow-sm p-4 min-h-[300px] justify-center items-center">
-          <div className="mb-2">
-            <h4 className="text-sm font-semibold text-gray-700">Distribución por grupos</h4>
+          {/* Card: Distribución por Grupos */}
+          <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full">
+            <h4 className="text-base font-semibold text-gray-700 mb-2">Distribución por Grupos</h4>
+            <div className="flex-grow flex justify-center items-center min-h-[200px]">
+              <PieChartConnector
+                onAssetSelect={id => {
+                  setSelectedId(id);
+                  setSelectionSource('chart');
+                }}
+                selectedId={selectedId}
+                assets={filteredAssets}
+                totalCurrent={filteredAssets.reduce((sum, a) => sum + (a.currentValue || 0), 0)}
+                selectionSource={selectionSource}
+              />
+            </div>
           </div>
-            <PieChartConnector
-              onAssetSelect={id => {
-                setSelectedId(id);
-                setSelectionSource('chart');
-              }}
-              selectedId={selectedId}
-              assets={filteredAssets}
-              totalCurrent={filteredAssets.reduce((sum, a) => sum + (a.currentValue || 0), 0)}
-              selectionSource={selectionSource}
-            />
         </div>
       </div>
 
-      {/* Sección inferior: multi-gráfico y panel derecho (desktop) */}
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mt-4 lg:mt-6">
-  <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Evolución por grupos (multi línea)</h4>
-            <div className="bg-white rounded shadow-sm p-4 min-h-[300px] items-center justify-center">
+      {/* Fila 2: Evolución del Portafolio (Unificado) */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4 lg:mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="text-base font-semibold text-gray-700 mb-2">Evolución del Portafolio y Grupos</h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEvolutionView('total')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                evolutionView === 'total'
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              Visión Total
+            </button>
+            <button
+              onClick={() => setEvolutionView('groups')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                evolutionView === 'groups'
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              Por Grupos
+            </button>
+          </div>
+        </div>
+        <div className="min-h-[320px] justify-center items-center">
+          {evolutionView === 'total' ? (
+            <>
+              {multiHistoryTotal && multiHistoryTotal.length > 0 ? (
+                <Suspense fallback={<div className="text-gray-400">Cargando gráfico...</div>}>
+                  <MultiLineChartPanelTotal data={multiHistoryTotal} height={320} />
+                </Suspense>
+              ) : (
+                <span className="text-gray-400">Sin datos históricos para mostrar.</span>
+              )}
+            </>
+          ) : (
+            <>
               {multiHistoryByGroup && groupNamesByChart && groupNamesByChart.length > 0 ? (
                 <Suspense fallback={<div className="text-gray-400">Cargando gráfico...</div>}>
                   <MultiLineChartPanelByGroup
@@ -244,37 +267,38 @@ export default function Dashboard2() {
               ) : (
                 <span className="text-gray-400">Sin datos históricos para mostrar.</span>
               )}
-            </div>
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Evolución por activos (multi línea)</h4>
-            <div className="bg-white rounded shadow-sm p-4 min-h-[300px]">
-              {/* Gráfico multilinea afectado por filtro de grupos, usando hook correcto */}
-              {multiHistory && multiHistory.length > 0 ? (
-                <Suspense fallback={<div className="text-gray-400">Cargando gráfico...</div>}>
-                  <MultiLineChartPanel
-                    multiHistory={multiHistory}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                    height={320}
-                    exchangeRates={exchangeRates}
-                  />
-                </Suspense>
-              ) : (
-                <span className="text-gray-400">Sin datos históricos para mostrar.</span>
-              )}
-            </div>
-          </div>
+            </>
+          )}
         </div>
-        <div className="hidden lg:flex">
-          <div className="w-full">
-            <div className="mb-2">
-              <h4 className="text-sm font-semibold text-gray-700 invisible">Evolución por grupos (multi línea)</h4>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm w-full px-6">
-              <PortfolioOverview assets={filteredAssets} totalCurrent={totalCurrent} totalInitial={totalInitial} />
-            </div>
-          </div>
+      </div>
+
+      {/* Filtros secundarios (duplicados) antes de Análisis por Activo */}
+      <div className="mb-4 lg:mb-6">
+        <ChartTabs
+          selectedId={selectedId}
+          userAssets={assets}
+          groupNames={groupNames}
+          onSelect={setSelectedId}
+        />
+      </div>
+
+      {/* Fila 3: Análisis por Activo */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <h4 className="text-base font-semibold text-gray-700 mb-2">Análisis por Activo</h4>
+        <div className="min-h-[300px]">
+          {multiHistory && multiHistory.length > 0 ? (
+            <Suspense fallback={<div className="text-gray-400">Cargando gráfico...</div>}>
+              <MultiLineChartPanel
+                multiHistory={multiHistory}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                height={320}
+                exchangeRates={exchangeRates}
+              />
+            </Suspense>
+          ) : (
+            <span className="text-gray-400">Sin datos históricos para mostrar.</span>
+          )}
         </div>
       </div>
     </div>

@@ -148,6 +148,8 @@ export default function AdminPanel() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [users, setUsers] = useState([]);
+  const [overview, setOverview] = useState({ rows: [], count: 0 });
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const [auth, setAuth] = useState({ username: '' });
   const navigate = useNavigate();
 
@@ -158,6 +160,16 @@ export default function AdminPanel() {
     } catch (err) {
       setError('Error cargando usuarios.');
     }
+  };
+
+  const fetchInvestmentsOverview = async () => {
+    setOverviewLoading(true);
+    try {
+      const { data } = await axios.get(`${API_BASE}/admin/investments/overview`, { withCredentials: true });
+      setOverview({ rows: data.rows || [], count: data.count || 0 });
+    } catch (e) {
+      setOverview({ rows: [], count: 0 });
+    } finally { setOverviewLoading(false); }
   };
 
   const handleApprove = async (username) => {
@@ -494,7 +506,7 @@ export default function AdminPanel() {
 
   {/* (Se eliminó la sección separada de Market Summary; ahora está dentro de Scripts) */}
 
-      <h2 className="text-xl font-semibold mb-2">👥 Usuarios Registrados</h2>
+  <h2 className="text-xl font-semibold mb-2">👥 Usuarios Registrados</h2>
 
       <div className="overflow-x-auto">
         <table className="min-w-full hidden md:table border text-left text-sm">
@@ -625,6 +637,54 @@ export default function AdminPanel() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Admin: Inversiones de todos los usuarios */}
+      <div className="mt-10">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">📒 Inversiones (Overview)</h2>
+          <button onClick={fetchInvestmentsOverview} className="px-3 py-1 bg-indigo-600 text-white text-sm rounded disabled:opacity-60" disabled={overviewLoading}>
+            {overviewLoading ? 'Cargando…' : 'Cargar/Refrescar'}
+          </button>
+        </div>
+        <div className="text-xs text-gray-600 mb-2">Listado plano con precio actual, fuente, FX y mini histórico (7d).</div>
+        <div className="overflow-x-auto">
+          <table className="min-w-[900px] text-xs border">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 border">Usuario</th>
+                <th className="p-2 border">Grupo</th>
+                <th className="p-2 border">ID</th>
+                <th className="p-2 border">Tipo</th>
+                <th className="p-2 border text-right">Precio (EUR)</th>
+                <th className="p-2 border">Fuente Precio</th>
+                <th className="p-2 border">FX</th>
+                <th className="p-2 border">Fuente FX</th>
+                <th className="p-2 border">Hist 7d (últ)</th>
+                <th className="p-2 border">Fuente Hist</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.rows.length === 0 ? (
+                <tr><td colSpan="10" className="p-3 text-center text-gray-500">{overviewLoading ? 'Cargando…' : 'Sin datos'}</td></tr>
+              ) : overview.rows.map((r, idx) => (
+                <tr key={idx} className="hover:bg-gray-50">
+                  <td className="p-2 border">{r.user}</td>
+                  <td className="p-2 border">{r.group}</td>
+                  <td className="p-2 border">{r.id}</td>
+                  <td className="p-2 border">{r.type}</td>
+                  <td className="p-2 border text-right">{r.priceEUR != null ? r.priceEUR.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits:2, maximumFractionDigits:2 }) : '-'}</td>
+                  <td className="p-2 border text-[11px]">{r.priceMeta ? `${r.priceMeta.source || '-'}${r.priceMeta.provider ? ' / ' + r.priceMeta.provider : ''}` : '-'}</td>
+                  <td className="p-2 border">{r.fx ? r.fx.rate?.toFixed(4) : '-'}</td>
+                  <td className="p-2 border text-[11px]">{r.fx ? (r.fx.source || '-') : '-'}</td>
+                  <td className="p-2 border text-right">{r.history?.length ? r.history[r.history.length-1]?.price?.toFixed(2) : '-'}</td>
+                  <td className="p-2 border text-[11px]">{r.historySource || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="text-xs text-gray-600 mt-2">Filas: {overview.count}</div>
       </div>
     </div>
   );

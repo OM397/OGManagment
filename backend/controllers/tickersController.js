@@ -99,3 +99,20 @@ exports.getMarketData = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch market data' });
   }
 };
+
+// GET /api/fx?currencies=USD,GBP,JPY
+// Devuelve un mapa { USD: number, GBP: number, ... } con tipos de cambio contra EUR
+exports.getFxRates = async (req, res) => {
+  try {
+    const raw = (req.query.currencies || '').toString();
+    const list = raw
+      .split(',')
+      .map(s => s.trim().toUpperCase())
+      .filter(Boolean);
+    const rates = await marketData.getFXRates(list.length ? list : undefined);
+    return res.json({ rates, fetchedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('❌ FX rates error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch FX rates' });
+  }
+};

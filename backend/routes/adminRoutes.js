@@ -283,3 +283,94 @@ router.get('/admin/dashboard/touch-logs', async (req, res) => {
 });
 
 module.exports = router;
+
+// --- ADMIN: INVESTMENTS OVERVIEW ---
+// Endpoint: GET /api/admin/investments/overview
+// Returns a flat list of all users' investments with current price, data sources, FX info and compact history.
+// Note: Protected by authMiddleware + isAdmin via router.use at top of file.
+router.get('/admin/investments/overview', async (req, res) => {
+  try {
+    const users = await User.find({}, { username: 1, data: 1 }).lean();
+    const rows = [];
+    const { getCurrentQuotes, fetchHistory, getFXRatesWithSource } = require('../services/unifiedMarketDataService');
+
+    // Collect all tickers to batch price fetch
+    const tickers = [];
+    for (const u of users) {
+      const byGroup = u?.data?.Investments || {};
+      for (const [groupName, list] of Object.entries(byGroup)) {
+        if (!Array.isArray(list)) continue;
+        for (const inv of list) {
+          if (!inv?.id || !inv?.type) continue;
+          tickers.push({ id: String(inv.id), type: inv.type === 'crypto' ? 'crypto' : 'stock' });
+        }
+      }
+    }
+    // Deduplicate tickers
+    const seen = new Set();
+    const unique = [];
+    for (const t of tickers) {
+      const key = t.type + ':' + t.id.toLowerCase();
+      if (!seen.has(key)) { seen.add(key); unique.push({ id: t.id.toLowerCase(), type: t.type }); }
+    }
+
+    // Fetch current quotes in one shot
+    const quotes = await getCurrentQuotes(unique);
+
+    // Compute needed FX currencies for stocks
+    const fxNeeded = new Set();
+    Object.values(quotes.stocks || {}).forEach(s => { if (s.currency && s.currency !== 'EUR') fxNeeded.add(s.currency); });
+    const fx = fxNeeded.size ? await getFXRatesWithSource([...fxNeeded]) : { rates: {}, source: 'none' };
+
+    // Helper to get price entry by id/type
+    const getPrice = (id, type) => {
+      const lid = id.toLowerCase();
+      return type === 'crypto' ? quotes.cryptos?.[lid] : quotes.stocks?.[lid];
+    };
+
+    // Build rows
+    for (const u of users) {
+      const byGroup = u?.data?.Investments || {};
+      for (const [groupName, list] of Object.entries(byGroup)) {
+        if (!Array.isArray(list)) continue;
+        for (const inv of list) {
+          if (!inv?.id || !inv?.type) continue;
+          const type = inv.type === 'crypto' ? 'crypto' : 'stock';
+          const pr = getPrice(inv.id, type) || null;
+          const eurPrice = pr?.eur != null ? pr.eur : (pr?.rawPrice != null ? (pr.currency && pr.currency !== 'EUR' && fx.rates?.[pr.currency] ? +(pr.rawPrice / fx.rates[pr.currency]).toFixed(4) : pr.rawPrice) : null);
+          const priceSource = pr?.source || 'unknown';
+          const priceProvider = pr?.provider || null;
+          const fxRate = type === 'stock' && pr?.currency && pr.currency !== 'EUR' ? fx.rates?.[pr.currency] : null;
+          const fxSource = fxRate ? fx.source : null;
+
+          // Small history sample (7 days) to keep it fast
+          let history = null; let historySource = null;
+          try {
+            const h = await fetchHistory(String(inv.id), type, 7);
+            if (h?.history?.length) {
+              history = h.history;
+              historySource = h.source || 'live';
+            }
+          } catch (_) {}
+
+          rows.push({
+            user: u.username,
+            group: groupName,
+            id: String(inv.id),
+            type,
+            priceEUR: eurPrice,
+            priceMeta: { currency: pr?.currency || 'EUR', source: priceSource, provider: priceProvider, fetchedAt: pr?.fetchedAt || null },
+            fx: fxRate != null ? { rate: fxRate, base: 'EUR', quote: pr?.currency, source: fxSource } : null,
+            history: history || [],
+            historySource: historySource
+          });
+        }
+      }
+    }
+
+    res.json({ count: rows.length, rows });
+  } catch (err) {
+    console.error('❌ Admin overview failed:', err.message);
+    res.status(500).json({ error: 'Error construyendo overview de inversiones.' });
+  }
+});

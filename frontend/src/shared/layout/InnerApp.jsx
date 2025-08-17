@@ -21,11 +21,26 @@ export default function InnerApp({ user, onLogout }) {
   return 'Dashboard2';
     }
   });
-  const [exchangeRates] = useState({ EUR: 1, USD: 1.1, GBP: 0.85 });
   const [reloadTrigger, setReloadTrigger] = useState(0);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showMailingSettingsModal, setShowMailingSettingsModal] = useState(false);
-  const { marketData } = useMarketData(categoryGroups || {}, reloadTrigger);
+  const { marketData, exchangeRates } = useMarketData(categoryGroups || {}, reloadTrigger, {
+    enableInterval: true,
+  currentPriceIntervalMs: 60000,   // precios cada 60s
+  fxThrottleMs: 200000,            // FX cada 200s
+  fxPollMs: 200000,                // polling FX cada 200s
+  startupBurstCount: 2,            // 2 bursts iniciales
+  startupBurstSpacingMs: 20000     // separados 20s
+  });
+
+  // Expose the freshest marketData globally for components that read window.marketDataGlobal (e.g., chart last-point patch)
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.marketDataGlobal = marketData;
+      }
+    } catch (_) {}
+  }, [marketData]);
 
   // Store selection changes
   useEffect(() => {
@@ -67,7 +82,7 @@ export default function InnerApp({ user, onLogout }) {
       case 'History':
         return <History />;
       case 'Dashboard2':
-        return <Dashboard2 />;
+        return <Dashboard2 {...commonProps} />;
       default:
         return <Dashboard2 {...commonProps} />;
     }

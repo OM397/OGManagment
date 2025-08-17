@@ -44,7 +44,7 @@ const mailingConfigRoutes = require(path.join(__dirname, baseDir, 'mailingConfig
 const adminMailingRoutes = require(path.join(__dirname, baseDir, 'adminMailingRoutes.js'));
 const performanceRoutes = require(path.join(__dirname, baseDir, 'performanceRoutes.js'));
 
-const authMiddleware = require(path.join(__dirname, middlewareBase, 'authMiddleware.js'));
+// Note: authMiddleware is applied within specific route modules; no need to import here
 
 // Simple in-memory metrics counters (reset on process restart)
 const metrics = {

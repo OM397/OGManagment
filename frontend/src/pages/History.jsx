@@ -164,11 +164,11 @@ export default function History() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold text-gray-900">Asset Lookup & Projection</h1>
-        <p className="text-gray-600 text-sm">Consulta temporal de un activo y calcula una proyección.</p>
-      </header>
+    <div className="px-2 sm:px-4 py-3 sm:py-5 w-full max-w-none space-y-8">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Asset Lookup & Projection</h1>
+        <p className="text-sm sm:text-base text-gray-600 mb-2">Consulta temporal de un activo y calcula una proyección.</p>
+      </div>
 
   {/* Moved Market Summary to the top as requested */}
   <MarketSummary />
@@ -230,7 +230,7 @@ export default function History() {
                   }}
                   allowDecimals
                 />
-                <Tooltip formatter={v => formatCurrency(v)} labelFormatter={l => l} />
+                {/* <Tooltip formatter={v => formatCurrency(v)} labelFormatter={l => l} /> */}
                 <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>

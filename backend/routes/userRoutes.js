@@ -58,13 +58,24 @@ router.post('/user-data', authMiddleware, async (req, res) => {
         for (const inv of investments) {
           if (!inv.initialCurrency && inv.id && inv.type) {
             try {
-              const historyData = await marketData.fetchHistory(inv.id, inv.type, 30);
-              if (historyData && historyData.currency) {
-                inv.initialCurrency = historyData.currency;
+              // 1) Intentar con precio actual (más fiable para moneda)
+              const priceData = await marketData.fetchPrice(inv.id, inv.type);
+              if (priceData && priceData.currency) {
+                inv.initialCurrency = String(priceData.currency).toUpperCase();
+              } else {
+                // 2) Fallback: historia (algunos proveedores exponen currency en meta)
+                const historyData = await marketData.fetchHistory(inv.id, inv.type, 7);
+                if (historyData && historyData.currency) {
+                  inv.initialCurrency = String(historyData.currency).toUpperCase();
+                }
               }
             } catch (e) {
               // Si falla, no asigna initialCurrency
             }
+          }
+          // Normalizar si vino en minúsculas desde el cliente
+          if (inv.initialCurrency && typeof inv.initialCurrency === 'string') {
+            inv.initialCurrency = inv.initialCurrency.toUpperCase();
           }
         }
       }

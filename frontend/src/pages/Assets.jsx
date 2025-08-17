@@ -162,10 +162,10 @@ export default function Assets({
   }, {});
 
   return (
-  <div className="px-2 sm:px-4 md:px-5 py-3 sm:py-5 w-full max-w-none">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">All Assets</h1>
-        <p className="text-gray-600">Complete overview of your investment portfolio</p>
+  <div className="px-2 sm:px-4 py-3 sm:py-5 w-full max-w-none">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">All Assets</h1>
+        <p className="text-sm sm:text-base text-gray-600 mb-2">Complete overview of your investment portfolio</p>
       </div>
 
       {/* Portfolio Summary */}

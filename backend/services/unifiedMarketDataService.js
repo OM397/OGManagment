@@ -76,11 +76,26 @@ async function getFXRates(currencies) {
   return res.data?.rates;
 }
 
+// Admin/reporting helper: FX with source metadata
+async function getFXRatesWithSource(currencies) {
+  const cache = await redis.get(FX_CACHE_KEY);
+  if (cache) {
+    return { rates: JSON.parse(cache), source: 'cache' };
+  }
+  const symbols = currencies.filter(c => c !== 'EUR').join(',');
+  const res = await axios.get('https://api.frankfurter.app/latest', {
+    params: { from: 'EUR', to: symbols }
+  });
+  const rates = res.data?.rates || {};
+  await redis.set(FX_CACHE_KEY, JSON.stringify(rates), 'EX', FX_TTL);
+  return { rates, source: 'live' };
+}
+
 // OPTIMIZED PRICE FETCHING WITH RATE LIMITING
 async function fetchPrice(id, type) {
   console.log('💸 Fetching price for:', id, '| Type:', type);
   const cacheKey = `price:${type}:${id.toLowerCase()}`;
-  let quote, currency = 'EUR';
+  let quote, currency = null;
 
   // Check cache first (with extended TTL)
   try {
@@ -106,7 +121,7 @@ async function fetchPrice(id, type) {
       });
       
       if (res?.regularMarketPrice) {
-        quote = { price: res.regularMarketPrice, currency: res.currency?.toUpperCase() || 'EUR' };
+        quote = { price: res.regularMarketPrice, currency: res.currency?.toUpperCase() || null, provider: 'yahoo' };
         if (res.marketCap) quote.marketCap = res.marketCap;
         console.log('✅ Yahoo Finance quote:', quote);
       }
@@ -122,6 +137,7 @@ async function fetchPrice(id, type) {
       quote = await providerManager.executeWithRateLimit('finnhub', async () => {
         return await finnhubService.getQuote(symbol);
       });
+      if (quote) quote.provider = 'finnhub';
       console.log('✅ Finnhub quote:', quote);
     } catch (e) {
       console.warn('❌ Finnhub failed:', e.message);
@@ -135,9 +151,27 @@ async function fetchPrice(id, type) {
       quote = await providerManager.executeWithRateLimit('twelvedata', async () => {
         return await twelveData.fetchQuote(symbol);
       });
+      if (quote) quote.provider = 'twelvedata';
       console.log('✅ TwelveData quote:', quote);
     } catch (e) {
       console.warn('❌ TwelveData failed:', e.message);
+    }
+  }
+
+  // If we have price but currency was not returned by main provider, try resolving currency via TwelveData
+  if (quote?.price != null && (!quote.currency || typeof quote.currency !== 'string')) {
+    try {
+      if (providerManager.isProviderAvailable('twelvedata')) {
+        const tdSymbol = getIdForApi(id, type, 'twelve') || id;
+        const td = await providerManager.executeWithRateLimit('twelvedata', async () => {
+          return await twelveData.fetchQuote(tdSymbol);
+        });
+        if (td?.currency) {
+          quote.currency = td.currency.toUpperCase();
+        }
+      }
+    } catch (e) {
+      // ignore currency resolve errors
     }
   }
 
@@ -167,7 +201,7 @@ async function fetchPrice(id, type) {
 
   const result = normalizePriceResponse({
     price: quote.price,
-    currency: quote.currency,
+    currency: (quote.currency && typeof quote.currency === 'string') ? quote.currency : 'EUR',
     date: new Date(),
     marketCap: quote.marketCap,
     source: quote.source || 'live',
@@ -385,7 +419,7 @@ async function getCurrentQuotes(tickers) {
         if (cachedRaw) {
           const parsed = JSON.parse(cachedRaw);
           if (parsed?.eur != null && parsed?.fetchedAt && Date.now() - new Date(parsed.fetchedAt).getTime() < FRESH_CACHE_THRESHOLD * 1000) {
-            priceObj = { eur: parsed.eur, from: 'cache-fresh' };
+            priceObj = { eur: parsed.eur, source: 'cache', provider: 'redis', fetchedAt: parsed.fetchedAt };
             result.cryptos[lowerId] = priceObj;
             const canonical = CG_SYMBOL_TO_ID[lowerId];
             if (canonical && canonical !== lowerId) {
@@ -415,9 +449,9 @@ async function getCurrentQuotes(tickers) {
         const marketCap = quote.marketCap;
 
         if (currency !== 'EUR') currencies.add(currency);
-        result.stocks[id.toLowerCase()] = { rawPrice: price, currency, marketCap };
+        result.stocks[id.toLowerCase()] = { rawPrice: price, currency, marketCap, source: quote.source || 'live', provider: quote?.meta?.provider || null, fetchedAt: quote.fetchedAt };
         if (effectiveId !== id) {
-          result.stocks[effectiveId.toLowerCase()] = { rawPrice: price, currency, marketCap };
+          result.stocks[effectiveId.toLowerCase()] = { rawPrice: price, currency, marketCap, source: quote.source || 'live', provider: quote?.meta?.provider || null, fetchedAt: quote.fetchedAt };
         }
         meta.success = true;
         meta.currency = currency;
@@ -456,7 +490,7 @@ async function getCurrentQuotes(tickers) {
             
             for (const key of lookups) {
               if (batchData[key]) {
-                c.priceObj = { eur: batchData[key].eur, marketCap: batchData[key].eur_market_cap };
+                c.priceObj = { eur: batchData[key].eur, marketCap: batchData[key].eur_market_cap, source: 'coingecko', provider: 'coingecko', fetchedAt: new Date().toISOString() };
                 c.meta.attempts.push(`coingecko:batch:${key}`);
                 if (key !== c.lowerId) c.resolvedId = key;
                 break;
@@ -479,7 +513,7 @@ async function getCurrentQuotes(tickers) {
             return await yahooFinance.quote(`${id.toUpperCase()}-EUR`);
           });
           if (yf?.regularMarketPrice && yf.regularMarketPrice > 0) {
-            c.priceObj = { eur: yf.regularMarketPrice };
+            c.priceObj = { eur: yf.regularMarketPrice, source: 'yahoo', provider: 'yahoo', fetchedAt: new Date().toISOString() };
             c.meta.attempts.push('yahoo:success');
           }
         } catch (e) {
@@ -582,6 +616,7 @@ async function fetchPerformanceMetrics(id, type, options = {}) {
 module.exports = {
   buildCoinGeckoMap,
   getFXRates,
+  getFXRatesWithSource,
   fetchPrice,
   getCurrentQuotes,
   fetchHistory,

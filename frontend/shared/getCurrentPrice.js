@@ -9,7 +9,12 @@ export function getCurrentPrice(asset, marketData) {
     if (metaEntry?.resolvedId) resolvedMetaId = metaEntry.resolvedId.toLowerCase();
   } catch {}
   const preferredCryptoKey = resolvedMetaId && marketData?.cryptos?.[resolvedMetaId] ? resolvedMetaId : mappedKey;
-  const idKey = (preferredCryptoKey && (asset.type === 'crypto')) ? (marketData?.cryptos?.[preferredCryptoKey] ? preferredCryptoKey : rawKey) : rawKey;
+  // For crypto, prefer mapped/resolved key; fall back to raw id as last resort
+  const idKey = (asset.type === 'crypto')
+    ? (preferredCryptoKey && marketData?.cryptos?.[preferredCryptoKey]
+        ? preferredCryptoKey
+        : rawKey)
+    : rawKey;
 
   if (asset.type === 'stock' && marketData?.stocks?.[idKey]) {
     const stockData = marketData.stocks[idKey];
@@ -17,8 +22,8 @@ export function getCurrentPrice(asset, marketData) {
   } else if (asset.type === 'crypto' && marketData?.cryptos?.[idKey]) {
     return (typeof marketData.cryptos[idKey].eur === 'number' ? marketData.cryptos[idKey].eur : undefined) ?? asset.manualValue ?? asset.actualCost ?? 0;
   } else if (asset.type === 'crypto') {
-    // Si no hay precio, usar 0 como fallback
-    return 0;
+    // Si no hay precio en el snapshot actual, no fuerces 0; usa manual/actualCost si existen
+    return asset.manualValue ?? asset.actualCost ?? 0;
   }
   return asset.manualValue ?? asset.actualCost ?? 0;
 }
