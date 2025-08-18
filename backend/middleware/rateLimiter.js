@@ -7,10 +7,14 @@ const isDev = process.env.NODE_ENV !== 'production' && !isTest;
 // General API limiter
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 1000 : 300,
+  max: isDev ? 2000 : 1500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes. Intenta más tarde.' },
+  skip: (req) => {
+    const url = req.originalUrl || req.url || '';
+    return /\/api\/(login|refresh|register|forgot-password)(\/|$)/.test(url);
+  },
   handler: (req, res, next, options) => {
     if (!isDev) console.warn('[RATE-LIMIT][API]', req.ip, req.path);
     res.status(options.statusCode).json(options.message);

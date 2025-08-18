@@ -87,6 +87,16 @@ function App() {
         console.warn('Error obteniendo datos del usuario:', dataError);
         // No romper sesión en móvil si /user-data falla puntualmente
         setInitialData(prev => prev || {});
+        // iOS-only: un reintento rápido por si las cookies llegaron tarde tras el reload
+        const ua = navigator.userAgent || '';
+        const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+        if (isIOS) {
+          try {
+            await new Promise(r => setTimeout(r, 350));
+            const userDataResponse = await dataAPI.getUserData();
+            setInitialData(userDataResponse?.data || {});
+          } catch (_) {}
+        }
       }
     } catch (error) {
       console.warn('Error verificando autenticación:', error);
