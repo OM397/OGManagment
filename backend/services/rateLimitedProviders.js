@@ -15,7 +15,7 @@ class ProviderManager extends EventEmitter {
         batchDelay: 2000, // Acumular requests por 2 segundos
         rateLimitedUntil: 0,
         requestCount: 0,
-        dailyLimit: 100
+  dailyLimit: 2000
       },
       yahoo: {
         lastRequest: 0,
