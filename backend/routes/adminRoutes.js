@@ -343,13 +343,29 @@ router.get('/admin/investments/overview', async (req, res) => {
           const fxRate = type === 'stock' && pr?.currency && pr.currency !== 'EUR' ? fx.rates?.[pr.currency] : null;
           const fxSource = fxRate ? fx.source : null;
 
+          // Market Cap in EUR (if available)
+          let marketCapEUR = null;
+          if (type === 'stock' && pr?.marketCap != null) {
+            if (pr.currency === 'EUR') marketCapEUR = pr.marketCap;
+            else if (pr.currency && fx.rates?.[pr.currency]) marketCapEUR = +(pr.marketCap / fx.rates[pr.currency]).toFixed(0);
+          } else if (type === 'crypto' && pr?.marketCap != null) {
+            // For cryptos from CoinGecko, marketCap is already in EUR
+            marketCapEUR = pr.marketCap;
+          }
+
           // Small history sample (7 days) to keep it fast
-          let history = null; let historySource = null;
+          let history = null; let historySource = null; let change7dPct = null;
           try {
             const h = await fetchHistory(String(inv.id), type, 7);
             if (h?.history?.length) {
               history = h.history;
               historySource = h.source || 'live';
+              // Compute 7d percent change using first vs last
+              const first = history[0]?.price;
+              const last = history[history.length - 1]?.price;
+              if (first != null && last != null && first > 0) {
+                change7dPct = +((last / first - 1)).toFixed(4);
+              }
             }
           } catch (_) {}
 
@@ -359,8 +375,11 @@ router.get('/admin/investments/overview', async (req, res) => {
             id: String(inv.id),
             type,
             priceEUR: eurPrice,
+            currency: pr?.currency || 'EUR',
             priceMeta: { currency: pr?.currency || 'EUR', source: priceSource, provider: priceProvider, fetchedAt: pr?.fetchedAt || null },
             fx: fxRate != null ? { rate: fxRate, base: 'EUR', quote: pr?.currency, source: fxSource } : null,
+            marketCapEUR: marketCapEUR,
+            change7dPct: change7dPct,
             history: history || [],
             historySource: historySource
           });

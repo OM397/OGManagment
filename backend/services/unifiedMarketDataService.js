@@ -5,7 +5,7 @@ const twelveData = require('./twelveDataService');
 const finnhubService = require('./finnhubService');
 const axios = require('axios');
 const redis = require('../redisClient');
-const { getIdForApi } = require('../utils/symbolMap');
+const { getIdForApi, resolveCryptoSymbol } = require('../utils/symbolMap');
 const {
   normalizePriceResponse,
   normalizeHistoryResponse,
@@ -507,18 +507,130 @@ async function getCurrentQuotes(tickers) {
     for (const c of cryptoContexts) {
       const { id, lowerId } = c;
       if (!c.priceObj && providerManager.isProviderAvailable('yahoo')) {
-        c.meta.attempts.push('yahoo:crypto-suffix');
+        // Try Yahoo with proper symbol mapping to EUR first
+        const yahooEur = getIdForApi(id, 'crypto', 'yahoo'); // e.g., ETH-EUR
+        c.meta.attempts.push(`yahoo:symbol:${yahooEur}`);
         try {
-          const yf = await providerManager.executeWithRateLimit('yahoo', async () => {
-            return await yahooFinance.quote(`${id.toUpperCase()}-EUR`);
-          });
+          const yf = await providerManager.executeWithRateLimit('yahoo', async () => yahooFinance.quote(yahooEur));
           if (yf?.regularMarketPrice && yf.regularMarketPrice > 0) {
             c.priceObj = { eur: yf.regularMarketPrice, source: 'yahoo', provider: 'yahoo', fetchedAt: new Date().toISOString() };
-            c.meta.attempts.push('yahoo:success');
+            c.meta.attempts.push('yahoo:eur:success');
+          } else {
+            c.meta.attempts.push('yahoo:eur:empty');
           }
         } catch (e) {
-          c.meta.attempts.push('yahoo:fail');
+          c.meta.attempts.push('yahoo:eur:fail');
         }
+
+        // If EUR failed, try USD and convert via FX
+        if (!c.priceObj) {
+          const sym = resolveCryptoSymbol(id) || id.toUpperCase();
+          const yahooUsd = `${sym}-USD`;
+          c.meta.attempts.push(`yahoo:symbol:${yahooUsd}`);
+          try {
+            const yf2 = await providerManager.executeWithRateLimit('yahoo', async () => yahooFinance.quote(yahooUsd));
+            if (yf2?.regularMarketPrice && yf2.regularMarketPrice > 0) {
+              try {
+                const rates = await getFXRates(['USD']);
+                const usdPerEur = rates?.USD; // Frankfurter: USD per 1 EUR
+                if (usdPerEur && usdPerEur > 0) {
+                  const eur = +(yf2.regularMarketPrice / usdPerEur).toFixed(4);
+                  c.priceObj = { eur, source: 'yahoo+fx', provider: 'yahoo', fetchedAt: new Date().toISOString() };
+                  c.meta.attempts.push('yahoo:usd+fx:success');
+                } else {
+                  c.meta.attempts.push('yahoo:usd+fx:rates-missing');
+                }
+              } catch (fxErr) {
+                c.meta.attempts.push('yahoo:usd+fx:fail');
+              }
+            } else {
+              c.meta.attempts.push('yahoo:usd:empty');
+            }
+          } catch (e2) {
+            c.meta.attempts.push('yahoo:usd:fail');
+          }
+        }
+      }
+
+      // Additional fallback: TwelveData USD quote + FX
+      if (!c.priceObj && providerManager.isProviderAvailable('twelvedata')) {
+        try {
+          const tdSymbol = getIdForApi(id, 'crypto', 'twelve'); // e.g., ETH/USD
+          c.meta.attempts.push(`twelvedata:quote:${tdSymbol}`);
+          const tdq = await providerManager.executeWithRateLimit('twelvedata', async () => twelveData.fetchQuote(tdSymbol));
+          if (tdq?.price && tdq.price > 0) {
+            if ((tdq.currency || 'USD') === 'EUR') {
+              c.priceObj = { eur: +tdq.price.toFixed(4), source: 'twelvedata', provider: 'twelvedata', fetchedAt: new Date().toISOString() };
+              c.meta.attempts.push('twelvedata:eur:success');
+            } else {
+              try {
+                const rates = await getFXRates(['USD']);
+                const usdPerEur = rates?.USD;
+                if (usdPerEur && usdPerEur > 0) {
+                  const eur = +(tdq.price / usdPerEur).toFixed(4);
+                  c.priceObj = { eur, source: 'twelvedata+fx', provider: 'twelvedata', fetchedAt: new Date().toISOString() };
+                  c.meta.attempts.push('twelvedata:usd+fx:success');
+                } else {
+                  c.meta.attempts.push('twelvedata:usd+fx:rates-missing');
+                }
+              } catch (_) {
+                c.meta.attempts.push('twelvedata:usd+fx:fail');
+              }
+            }
+          } else {
+            c.meta.attempts.push('twelvedata:empty');
+          }
+        } catch (e) {
+          c.meta.attempts.push('twelvedata:fail');
+        }
+      }
+
+      // Additional fallback: Finnhub BINANCE:SYMBOLUSDT + FX
+      if (!c.priceObj && providerManager.isProviderAvailable('finnhub')) {
+        try {
+          const fhSymbol = getIdForApi(id, 'crypto', 'finnhub'); // e.g., BINANCE:ETHUSDT
+          c.meta.attempts.push(`finnhub:quote:${fhSymbol}`);
+          const fh = await providerManager.executeWithRateLimit('finnhub', async () => finnhubService.getQuote(fhSymbol));
+          if (fh?.price && fh.price > 0) {
+            if ((fh.currency || 'USD') === 'EUR') {
+              c.priceObj = { eur: +fh.price.toFixed(4), source: 'finnhub', provider: 'finnhub', fetchedAt: new Date().toISOString() };
+              c.meta.attempts.push('finnhub:eur:success');
+            } else {
+              try {
+                const rates = await getFXRates(['USD']);
+                const usdPerEur = rates?.USD;
+                if (usdPerEur && usdPerEur > 0) {
+                  const eur = +(fh.price / usdPerEur).toFixed(4);
+                  c.priceObj = { eur, source: 'finnhub+fx', provider: 'finnhub', fetchedAt: new Date().toISOString() };
+                  c.meta.attempts.push('finnhub:usd+fx:success');
+                } else {
+                  c.meta.attempts.push('finnhub:usd+fx:rates-missing');
+                }
+              } catch (_) {
+                c.meta.attempts.push('finnhub:usd+fx:fail');
+              }
+            }
+          } else {
+            c.meta.attempts.push('finnhub:empty');
+          }
+        } catch (e) {
+          c.meta.attempts.push('finnhub:fail');
+        }
+      }
+
+      // Final local fallback: use stale cache if available to avoid unknown
+      if (!c.priceObj) {
+        try {
+          const cacheKey = `price:crypto:${lowerId}`;
+          const cachedRaw = await redis.get(cacheKey);
+          if (cachedRaw) {
+            const parsed = JSON.parse(cachedRaw);
+            if (parsed?.eur != null) {
+              c.priceObj = { eur: parsed.eur, source: 'cache-stale', provider: 'redis', fetchedAt: parsed.fetchedAt || new Date().toISOString() };
+              c.meta.attempts.push('cache:stale');
+            }
+          }
+        } catch (_) {}
       }
 
       // Final processing

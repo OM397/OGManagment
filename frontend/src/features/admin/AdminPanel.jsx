@@ -649,7 +649,7 @@ export default function AdminPanel() {
         </div>
         <div className="text-xs text-gray-600 mb-2">Listado plano con precio actual, fuente, FX y mini histórico (7d).</div>
         <div className="overflow-x-auto">
-          <table className="min-w-[900px] text-xs border">
+          <table className="min-w-[1100px] text-xs border">
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-2 border">Usuario</th>
@@ -657,16 +657,19 @@ export default function AdminPanel() {
                 <th className="p-2 border">ID</th>
                 <th className="p-2 border">Tipo</th>
                 <th className="p-2 border text-right">Precio (EUR)</th>
+                <th className="p-2 border">Moneda</th>
                 <th className="p-2 border">Fuente Precio</th>
                 <th className="p-2 border">FX</th>
                 <th className="p-2 border">Fuente FX</th>
+                <th className="p-2 border text-right">Mkt Cap (EUR)</th>
+                <th className="p-2 border text-right">7d %</th>
                 <th className="p-2 border">Hist 7d (últ)</th>
                 <th className="p-2 border">Fuente Hist</th>
               </tr>
             </thead>
             <tbody>
               {overview.rows.length === 0 ? (
-                <tr><td colSpan="10" className="p-3 text-center text-gray-500">{overviewLoading ? 'Cargando…' : 'Sin datos'}</td></tr>
+                <tr><td colSpan="12" className="p-3 text-center text-gray-500">{overviewLoading ? 'Cargando…' : 'Sin datos'}</td></tr>
               ) : overview.rows.map((r, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
                   <td className="p-2 border">{r.user}</td>
@@ -674,9 +677,17 @@ export default function AdminPanel() {
                   <td className="p-2 border">{r.id}</td>
                   <td className="p-2 border">{r.type}</td>
                   <td className="p-2 border text-right">{r.priceEUR != null ? r.priceEUR.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits:2, maximumFractionDigits:2 }) : '-'}</td>
-                  <td className="p-2 border text-[11px]">{r.priceMeta ? `${r.priceMeta.source || '-'}${r.priceMeta.provider ? ' / ' + r.priceMeta.provider : ''}` : '-'}</td>
+                  <td className="p-2 border">{r.currency || '-'}</td>
+                  <td
+                    className="p-2 border text-[11px]"
+                    title={r.priceMeta?.fetchedAt ? `fetchedAt: ${new Date(r.priceMeta.fetchedAt).toLocaleString()}` : ''}
+                  >
+                    {r.priceMeta ? `${r.priceMeta.source || '-'}${r.priceMeta.provider ? ' / ' + r.priceMeta.provider : ''}` : '-'}
+                  </td>
                   <td className="p-2 border">{r.fx ? r.fx.rate?.toFixed(4) : '-'}</td>
                   <td className="p-2 border text-[11px]">{r.fx ? (r.fx.source || '-') : '-'}</td>
+                  <td className="p-2 border text-right">{r.marketCapEUR != null ? r.marketCapEUR.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits:0, maximumFractionDigits:0 }) : '-'}</td>
+                  <td className={`p-2 border text-right ${r.change7dPct == null ? 'text-gray-600' : r.change7dPct > 0 ? 'text-green-600' : r.change7dPct < 0 ? 'text-red-600' : 'text-gray-600'}`}>{r.change7dPct == null ? '-' : (r.change7dPct*100).toFixed(2) + '%'}</td>
                   <td className="p-2 border text-right">{r.history?.length ? r.history[r.history.length-1]?.price?.toFixed(2) : '-'}</td>
                   <td className="p-2 border text-[11px]">{r.historySource || '-'}</td>
                 </tr>

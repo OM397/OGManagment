@@ -9,13 +9,17 @@ class ProviderManager extends EventEmitter {
     this.providers = {
       coingecko: {
         lastRequest: 0,
-        cooldownMs: 1000, // 1 segundo entre llamadas
+  cooldownMs: 2000, // 2 segundos entre llamadas para suavizar ráfagas
         batchBuffer: [],
         batchTimeout: null,
-        batchDelay: 2000, // Acumular requests por 2 segundos
+  batchDelay: 5000, // Acumular requests por 5 segundos para agrupar más y llamar menos
         rateLimitedUntil: 0,
         requestCount: 0,
-  dailyLimit: 2000
+  dailyLimit: 2000,
+  // Nuevo: límite por minuto y contadores de ventana
+  perMinuteLimit: 40,
+  minuteStart: Date.now(),
+  minuteCount: 0
       },
       yahoo: {
         lastRequest: 0,
@@ -74,7 +78,23 @@ class ProviderManager extends EventEmitter {
       throw new Error(`Provider ${providerName} not available (rate limited or over daily limit)`);
     }
 
-    const now = Date.now();
+    let now = Date.now();
+    // Ventana por minuto: si se excede, esperar hasta el inicio de la próxima ventana
+    if (typeof provider.perMinuteLimit === 'number') {
+      if (now - provider.minuteStart >= 60000) {
+        provider.minuteStart = now;
+        provider.minuteCount = 0;
+      } else if (provider.minuteCount >= provider.perMinuteLimit) {
+        const waitMs = 60000 - (now - provider.minuteStart);
+        const delay = (ms) => new Promise(r => setTimeout(r, ms));
+        console.warn(`⏳ ${providerName} per-minute limit reached (${provider.perMinuteLimit}/min). Waiting ${waitMs}ms…`);
+        await delay(waitMs);
+        provider.minuteStart = Date.now();
+        provider.minuteCount = 0;
+        now = provider.minuteStart;
+      }
+    }
+
     const waitTime = Math.max(0, provider.cooldownMs - (now - provider.lastRequest));
     
     if (waitTime > 0) {
@@ -83,6 +103,9 @@ class ProviderManager extends EventEmitter {
 
     provider.lastRequest = Date.now();
     provider.requestCount++;
+    if (typeof provider.perMinuteLimit === 'number') {
+      provider.minuteCount++;
+    }
 
     try {
       const result = await requestFn();
