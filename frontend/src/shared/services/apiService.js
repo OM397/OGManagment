@@ -34,6 +34,7 @@ try {
 // 🔄 Estado de renovación para evitar múltiples intentos simultáneos
 let isRefreshing = false;
 let failedQueue = [];
+let iosMissingTried = false; // evita bucles por MISSING_TOKEN en iOS
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach(prom => {
@@ -53,14 +54,20 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // No interceptar errores de endpoints de autenticación
+    const url = (originalRequest && (originalRequest.url || '')) || '';
+    const isAuthRequest = /\/login$|\/refresh$|\/logout$/.test(url);
+
     // Si es error 401 y el request no es de auth, intentar renovar token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       const errorData = error.response.data || {};
       const code = errorData?.code;
-      const allowIOSMissing = IS_IOS && code === 'MISSING_TOKEN';
+      const allowIOSMissing = IS_IOS && code === 'MISSING_TOKEN' && !iosMissingTried;
       const shouldRefresh = !!(errorData?.requiresRefresh || ['TOKEN_EXPIRED','SESSION_NOT_FOUND'].includes(code) || allowIOSMissing);
       
       if (shouldRefresh) {
+        // Marcar que ya intentamos una vez el caso iOS MISSING_TOKEN
+        if (allowIOSMissing) iosMissingTried = true;
         
         if (isRefreshing) {
           // Si ya estamos renovando, agregar a la cola
@@ -91,12 +98,18 @@ apiClient.interceptors.response.use(
           // Si la renovación falla, limpiar sesión
           processQueue(refreshError);
           isRefreshing = false;
-          
-          // Redireccionar al login
+
+          // Caso iOS/MISSING_TOKEN: evitar recargar en bucle. Limpiar y salir sin redirect duro.
+          if (allowIOSMissing) {
+            try { sessionStorage.removeItem('accessToken'); } catch(_) {}
+            delete apiClient.defaults.headers.common['Authorization'];
+            return Promise.reject(refreshError);
+          }
+
+          // Otros casos: redirigir a login de forma controlada
           try { sessionStorage.clear(); localStorage.clear(); } catch(_) {}
           delete apiClient.defaults.headers.common['Authorization'];
           window.location.href = '/';
-          
           return Promise.reject(refreshError);
         }
   }
