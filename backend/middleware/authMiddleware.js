@@ -14,7 +14,7 @@ module.exports = async function authMiddleware(req, res, next) {
     if (process.env.NODE_ENV !== 'production') {
       console.warn('[authMiddleware] 401 sin token: cookies=', Object.keys(req.cookies||{}), 'authHeader=', !!req.headers.authorization);
     }
-    return res.status(401).json({ error: 'Token faltante.', code: 'MISSING_TOKEN', requiresRefresh: true });
+    return res.status(401).json({ error: 'Token faltante.', code: 'MISSING_TOKEN' });
   }
 
   try {

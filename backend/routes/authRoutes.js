@@ -227,9 +227,13 @@ router.post('/logout', async (req, res) => {
   }
 
   res
-  .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
-  .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
-  .clearCookie('token', COOKIE_OPTIONS)
+    .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
+    .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
+    .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+    .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+    .clearCookie('accessToken', COOKIE_OPTIONS)
+    .clearCookie('refreshToken', COOKIE_OPTIONS)
+    .clearCookie('token', COOKIE_OPTIONS)
     .status(200)
     .json({ success: true, message: 'Sesión cerrada correctamente.' });
 });
@@ -293,7 +297,11 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
     res
       .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
       .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
-  .clearCookie('token', COOKIE_OPTIONS)
+      .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+      .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+      .clearCookie('accessToken', COOKIE_OPTIONS)
+      .clearCookie('refreshToken', COOKIE_OPTIONS)
+      .clearCookie('token', COOKIE_OPTIONS)
       .status(401)
       .json({ 
         error: 'Refresh token inválido: ' + err.message,
@@ -329,6 +337,10 @@ router.get('/sessions', async (req, res) => {
     res
       .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
       .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
+      .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+      .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+      .clearCookie('accessToken', COOKIE_OPTIONS)
+      .clearCookie('refreshToken', COOKIE_OPTIONS)
       .clearCookie('token', COOKIE_OPTIONS)
       .status(401)
       .json({ error: 'Token inválido.' });
@@ -380,6 +392,10 @@ router.post('/logout-all', async (req, res) => {
     res
       .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
       .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
+      .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+      .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+      .clearCookie('accessToken', COOKIE_OPTIONS)
+      .clearCookie('refreshToken', COOKIE_OPTIONS)
       .clearCookie('token', COOKIE_OPTIONS)
       .status(200)
       .json({
@@ -390,6 +406,10 @@ router.post('/logout-all', async (req, res) => {
     res
       .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
       .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
+      .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+      .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+      .clearCookie('accessToken', COOKIE_OPTIONS)
+      .clearCookie('refreshToken', COOKIE_OPTIONS)
       .clearCookie('token', COOKIE_OPTIONS)
       .status(401)
       .json({ error: 'Token inválido.' });

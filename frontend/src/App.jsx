@@ -116,7 +116,14 @@ function App() {
   };
 
   useEffect(() => {
-    fetchUserData();
+    let mounted = true;
+    const withTimeout = Promise.race([
+      fetchUserData(),
+      new Promise(resolve => setTimeout(resolve, 5000)) // evita spinner infinito
+    ]).finally(() => {
+      if (mounted) setAuthChecked(prev => prev || true);
+    });
+    return () => { mounted = false; };
   }, []);
 
   if (!authChecked) return (
