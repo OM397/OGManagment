@@ -320,7 +320,7 @@ router.get('/admin/investments/overview', async (req, res) => {
     // Compute needed FX currencies for stocks
     const fxNeeded = new Set();
     Object.values(quotes.stocks || {}).forEach(s => { if (s.currency && s.currency !== 'EUR') fxNeeded.add(s.currency); });
-    const fx = fxNeeded.size ? await getFXRatesWithSource([...fxNeeded]) : { rates: {}, source: 'none' };
+  const fx = fxNeeded.size ? await getFXRatesWithSource([...fxNeeded]) : { rates: {}, source: 'none' };
 
     // Helper to get price entry by id/type
     const getPrice = (id, type) => {
@@ -340,8 +340,10 @@ router.get('/admin/investments/overview', async (req, res) => {
           const eurPrice = pr?.eur != null ? pr.eur : (pr?.rawPrice != null ? (pr.currency && pr.currency !== 'EUR' && fx.rates?.[pr.currency] ? +(pr.rawPrice / fx.rates[pr.currency]).toFixed(4) : pr.rawPrice) : null);
           const priceSource = pr?.source || 'unknown';
           const priceProvider = pr?.provider || null;
+          const cacheSource = (priceSource && priceSource.startsWith('cache')) ? (pr?.cacheFrom || null) : null;
           const fxRate = type === 'stock' && pr?.currency && pr.currency !== 'EUR' ? fx.rates?.[pr.currency] : null;
           const fxSource = fxRate ? fx.source : null;
+          const fxCacheSource = fxRate && fx?.source === 'cache' ? (fx.cacheFrom || null) : null;
 
           // Market Cap in EUR (if available)
           let marketCapEUR = null;
@@ -377,7 +379,9 @@ router.get('/admin/investments/overview', async (req, res) => {
             priceEUR: eurPrice,
             currency: pr?.currency || 'EUR',
             priceMeta: { currency: pr?.currency || 'EUR', source: priceSource, provider: priceProvider, fetchedAt: pr?.fetchedAt || null },
+            cacheSource: cacheSource,
             fx: fxRate != null ? { rate: fxRate, base: 'EUR', quote: pr?.currency, source: fxSource } : null,
+            fxCacheSource: fxCacheSource,
             marketCapEUR: marketCapEUR,
             change7dPct: change7dPct,
             history: history || [],

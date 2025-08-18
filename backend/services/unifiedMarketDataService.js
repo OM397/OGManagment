@@ -51,6 +51,7 @@ async function buildCoinGeckoMap(){
 }
 
 const FX_CACHE_KEY = 'fx:rates';
+const FX_META_KEY = 'fx:meta';
 const FX_TTL = 3600;
 // Extended TTL for better caching
 const PRICE_TTL = 900; // 15 minutes instead of 5
@@ -73,6 +74,10 @@ async function getFXRates(currencies) {
 
   console.log('📈 FX Rates API response:', res.data);
   await redis.set(FX_CACHE_KEY, JSON.stringify(res.data?.rates), 'EX', FX_TTL);
+  // store lightweight meta for cache provenance (do not change the main cache shape)
+  try {
+    await redis.set(FX_META_KEY, JSON.stringify({ provider: 'frankfurter', fetchedAt: new Date().toISOString() }), 'EX', FX_TTL);
+  } catch (_) {}
   return res.data?.rates;
 }
 
@@ -80,7 +85,9 @@ async function getFXRates(currencies) {
 async function getFXRatesWithSource(currencies) {
   const cache = await redis.get(FX_CACHE_KEY);
   if (cache) {
-    return { rates: JSON.parse(cache), source: 'cache' };
+    let meta = null;
+    try { const m = await redis.get(FX_META_KEY); if (m) meta = JSON.parse(m); } catch (_) {}
+    return { rates: JSON.parse(cache), source: 'cache', cacheFrom: meta?.provider || 'frankfurter', fetchedAt: meta?.fetchedAt || null };
   }
   const symbols = currencies.filter(c => c !== 'EUR').join(',');
   const res = await axios.get('https://api.frankfurter.app/latest', {
@@ -88,7 +95,10 @@ async function getFXRatesWithSource(currencies) {
   });
   const rates = res.data?.rates || {};
   await redis.set(FX_CACHE_KEY, JSON.stringify(rates), 'EX', FX_TTL);
-  return { rates, source: 'live' };
+  try {
+    await redis.set(FX_META_KEY, JSON.stringify({ provider: 'frankfurter', fetchedAt: new Date().toISOString() }), 'EX', FX_TTL);
+  } catch (_) {}
+  return { rates, source: 'live', cacheFrom: 'frankfurter', fetchedAt: new Date().toISOString() };
 }
 
 // OPTIMIZED PRICE FETCHING WITH RATE LIMITING
@@ -262,6 +272,7 @@ async function fetchHistory(id, type, days = 30) {
 
   let history = [];
   let currency = 'EUR';
+  let providerName = null;
 
   // 1 Try TwelveData with rate limiting (good for short ranges)
   if (days <= 60 && providerManager.isProviderAvailable('twelvedata')) {
@@ -277,6 +288,7 @@ async function fetchHistory(id, type, days = 30) {
           price: +Number(p.close).toFixed(2)
         }));
         console.log('✅ TwelveData history:', history.length, 'items');
+        providerName = 'twelvedata';
       }
     } catch (e) {
       console.warn('❌ TwelveData history failed:', e.message);
@@ -300,11 +312,12 @@ async function fetchHistory(id, type, days = 30) {
             period1: new Date(Date.now() - days * 86400000)
           });
         });
-        history = yf.map(p => ({
+    history = yf.map(p => ({
           date: p.date.toISOString().split('T')[0],
           price: +p.close.toFixed(2)
         }));
         currency = yf[0]?.currency || 'EUR';
+    providerName = 'yahoo';
         console.log('✅ Yahoo Finance history:', history.length, 'items');
       } catch (e) {
         console.warn('❌ Yahoo history failed:', e.message);
@@ -323,6 +336,7 @@ async function fetchHistory(id, type, days = 30) {
               price: +p.close.toFixed(2)
             }));
             currency = yf2[0]?.currency || 'EUR';
+      providerName = 'yahoo';
             console.log('✅ Yahoo (crypto suffix) history:', history.length, 'items');
           } catch (e2) {
             console.warn('❌ Yahoo crypto suffix history failed:', e2.message);
@@ -336,10 +350,11 @@ async function fetchHistory(id, type, days = 30) {
   if (!history.length && providerManager.isProviderAvailable('finnhub')) {
     try {
       const symbol = getIdForApi(id, type, 'finnhub') || id;
-      history = await providerManager.executeWithRateLimit('finnhub', async () => {
+  history = await providerManager.executeWithRateLimit('finnhub', async () => {
         return await finnhubService.getHistory(symbol);
       });
       currency = 'USD';
+  providerName = 'finnhub';
       console.log('✅ Finnhub history:', history.length, 'items');
     } catch (e) {
       console.warn('❌ Finnhub history failed:', e.message);
@@ -365,9 +380,9 @@ async function fetchHistory(id, type, days = 30) {
   const result = normalizeHistoryResponse({
     history: normalize(history),
     currency,
-    source: 'live',
+    source: providerName ? `live/${providerName}` : 'live',
     fetchedAt: new Date().toISOString(),
-    provider: null
+    provider: providerName
   });
   
   await redis.set(cacheKey, JSON.stringify(result), 'EX', HISTORY_TTL);
@@ -413,13 +428,14 @@ async function getCurrentQuotes(tickers) {
       let resolvedId = lowerId;
       let usedCache = false;
 
-      // Step 0: fresh cache (<180s)
+  // Step 0: fresh cache (<180s)
       try {
         const cachedRaw = await redis.get(`price:crypto:${lowerId}`);
         if (cachedRaw) {
           const parsed = JSON.parse(cachedRaw);
           if (parsed?.eur != null && parsed?.fetchedAt && Date.now() - new Date(parsed.fetchedAt).getTime() < FRESH_CACHE_THRESHOLD * 1000) {
-            priceObj = { eur: parsed.eur, source: 'cache', provider: 'redis', fetchedAt: parsed.fetchedAt };
+    const cacheFrom = parsed.provider || parsed.source || null;
+    priceObj = { eur: parsed.eur, source: 'cache', provider: 'redis', fetchedAt: parsed.fetchedAt, cacheFrom };
             result.cryptos[lowerId] = priceObj;
             const canonical = CG_SYMBOL_TO_ID[lowerId];
             if (canonical && canonical !== lowerId) {
@@ -618,7 +634,7 @@ async function getCurrentQuotes(tickers) {
         }
       }
 
-      // Final local fallback: use stale cache if available to avoid unknown
+  // Final local fallback: use stale cache if available to avoid unknown
       if (!c.priceObj) {
         try {
           const cacheKey = `price:crypto:${lowerId}`;
@@ -626,7 +642,8 @@ async function getCurrentQuotes(tickers) {
           if (cachedRaw) {
             const parsed = JSON.parse(cachedRaw);
             if (parsed?.eur != null) {
-              c.priceObj = { eur: parsed.eur, source: 'cache-stale', provider: 'redis', fetchedAt: parsed.fetchedAt || new Date().toISOString() };
+      const cacheFrom = parsed.provider || parsed.source || null;
+      c.priceObj = { eur: parsed.eur, source: 'cache-stale', provider: 'redis', fetchedAt: parsed.fetchedAt || new Date().toISOString(), cacheFrom };
               c.meta.attempts.push('cache:stale');
             }
           }
@@ -640,11 +657,18 @@ async function getCurrentQuotes(tickers) {
           result.cryptos[c.resolvedId] = c.priceObj;
         }
         c.meta.success = true;
-        
-        // Cache the result
-        const cacheKey = `price:crypto:${lowerId}`;
-        const cacheData = { eur: c.priceObj.eur, fetchedAt: new Date().toISOString() };
-        await redis.set(cacheKey, JSON.stringify(cacheData), 'EX', PRICE_TTL);
+
+        // Cache the result only if it's from a live provider (avoid writing cache-as-origin)
+        if (c.priceObj.source !== 'cache' && c.priceObj.source !== 'cache-stale') {
+          const cacheKey = `price:crypto:${lowerId}`;
+          const cacheData = {
+            eur: c.priceObj.eur,
+            fetchedAt: new Date().toISOString(),
+            provider: c.priceObj.provider || null,
+            source: c.priceObj.source || 'live'
+          };
+          await redis.set(cacheKey, JSON.stringify(cacheData), 'EX', PRICE_TTL);
+        }
       }
       result._meta.push(c.meta);
     }
