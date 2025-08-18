@@ -2,6 +2,16 @@
 import axios from 'axios';
 import { API_BASE } from '../config';
 
+// Detect iOS devices (iPhone/iPad/iPod or iPadOS Safari identifying as Mac with touch)
+const IS_IOS = (() => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  const isIOSDevice = /iP(hone|od|ad)/.test(platform) || (/Mac/.test(platform) && 'ontouchend' in document);
+  const isSafari = /Safari\//.test(ua) && !/Chrome\//.test(ua);
+  return isIOSDevice && isSafari;
+})();
+
 // 🔧 Crear instancia de axios con configuración base
 const apiClient = axios.create({
   baseURL: API_BASE,
@@ -11,6 +21,15 @@ const apiClient = axios.create({
 
 // Nota: ya no persistimos accessToken en sessionStorage para reducir superficie de ataque.
 // Si necesitas pruebas locales con Authorization, ajusta manualmente aquí de forma temporal.
+
+// iOS fallback: si los cookies se bloquean en iOS Safari tras un reload, usa Authorization
+// con un accessToken efímero guardado en sessionStorage. Esto NO almacena refresh token.
+try {
+  const stored = sessionStorage.getItem('accessToken');
+  if (stored && IS_IOS) {
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${stored}`;
+  }
+} catch (_) {}
 
 // 🔄 Estado de renovación para evitar múltiples intentos simultáneos
 let isRefreshing = false;
@@ -95,7 +114,9 @@ export const authAPI = {
     const data = response.data;
     // En dev podrías opcionalmente inyectar Authorization header, pero NO lo guardamos en storage.
     if (data?.accessToken) {
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+  apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+  // iOS-only fallback persist across reloads (no refresh token stored)
+  try { if (IS_IOS) sessionStorage.setItem('accessToken', data.accessToken); } catch (_) {}
     }
     return data;
   },

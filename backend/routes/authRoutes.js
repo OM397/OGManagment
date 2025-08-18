@@ -10,6 +10,7 @@ const TokenService = require('../services/tokenService');
 const ValidationMiddleware = require('../middleware/validation');
 
 const router = express.Router();
+const EXPOSE_ACCESS_TOKEN = ((process.env.EXPOSE_ACCESS_TOKEN || '').toLowerCase() === 'true');
 
 // Host-only cookies (no domain) are more reliable on iOS/Safari/WebViews.
 // In production use __Host- prefix (requires Secure + Path=/ and no Domain).
@@ -195,11 +196,16 @@ router.post('/login',
   // ...existing code...
     }
 
+    const responseBody = { success: true, uid: user.publicId, role: user.role, tokenId, lastLogin: user.lastLogin };
+    if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production' || EXPOSE_ACCESS_TOKEN) {
+      responseBody.accessToken = accessToken;
+    }
+
     res
       .cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
       .cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
       .status(200)
-  .json({ success: true, uid: user.publicId, role: user.role, tokenId, lastLogin: user.lastLogin, ...(process.env.NODE_ENV !== 'production' ? { accessToken } : {}) });
+  .json(responseBody);
   } catch (err) {
   // ...existing code...
     res.status(500).json({ error: 'Error del servidor.' });
