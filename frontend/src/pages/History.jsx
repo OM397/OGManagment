@@ -357,9 +357,6 @@ function MarketSummary() {
                   {r.price!=null? (
                     <div className="flex flex-col items-end">
                       <div>{formatSummaryPrice(r.id, r.price)}</div>
-                      {r.priceMeta?.provider && (
-                        <span className="text-[10px] text-gray-400">{r.priceMeta.source==='cache'?'cache / ':''}{r.priceMeta.provider}</span>
-                      )}
                     </div>
                   ) : '–'}
                 </td>

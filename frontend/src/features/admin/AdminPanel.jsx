@@ -409,7 +409,16 @@ export default function AdminPanel() {
                 {summary?.assets?.map(a => (
                   <tr key={a.id} className="hover:bg-gray-50">
                     <td className="p-2 border">{a.label || a.id}</td>
-                    <td className="p-2 border text-right">{a.price != null ? a.price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits:2, maximumFractionDigits:2 }) : '-'}</td>
+                    <td className="p-2 border text-right">
+                      {a.price != null ? (
+                        <div className="flex flex-col items-end">
+                          <div>{a.price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits:2, maximumFractionDigits:2 })}</div>
+                          {a.priceMeta?.provider && (
+                            <span className="text-[10px] text-gray-400">{a.priceMeta.source==='cache' ? 'cache / ' : ''}{a.priceMeta.provider}</span>
+                          )}
+                        </div>
+                      ) : '-'}
+                    </td>
                     <td className="p-2 border text-right">{a.marketCap != null ? formatCap(a.marketCap) : '-'}</td>
                     <td className={`p-2 border text-right ${colorClass(a.changes?.['7d'])}`}>{formatPct(a.changes?.['7d'])}</td>
                     <td className={`p-2 border text-right ${colorClass(a.changes?.['30d'])}`}>{formatPct(a.changes?.['30d'])}</td>

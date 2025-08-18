@@ -154,3 +154,21 @@ exports.getMarketSummary = async (req, res) => {
 
 // Export buildSummary for internal jobs (weekly email, etc.)
 module.exports.buildSummary = buildSummary;
+
+// Precalienta y guarda en caché un Market Summary fresco (force=true)
+// Retorna el summary generado o lanza si falla y no existe last-good.
+module.exports.prewarmSummary = async function prewarmSummary() {
+  // Intenta construir y cachear uno nuevo (force)
+  try {
+    const summary = await buildSummary({ force: true });
+    if (!summary?.assets?.length) throw new Error('empty_summary');
+    await redis.set(CACHE_KEY, JSON.stringify(summary), 'PX', REFRESH_MS);
+    await redis.set(LAST_GOOD_KEY, JSON.stringify(summary));
+    return summary;
+  } catch (e) {
+    // Fallback a last-good si existe
+    const lastGood = await redis.get(LAST_GOOD_KEY);
+    if (lastGood) return JSON.parse(lastGood);
+    throw e;
+  }
+};

@@ -26,6 +26,39 @@ function calculateIRRWithTimes(flows, guess = 0.1, maxIterations = 100, toleranc
   return null;
 }
 
+async function prewarmUserAssets() {
+  try {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGODB_URI);
+    }
+    const users = await User.find({ receiveWeeklyEmail: true }, { data: 1 }).lean();
+    const tickers = [];
+    for (const u of users) {
+      const byGroup = u?.data?.Investments || {};
+      for (const [groupName, list] of Object.entries(byGroup)) {
+        if (!Array.isArray(list)) continue;
+        for (const inv of list) {
+          if (!inv?.id || !inv?.type) continue;
+          tickers.push({ id: String(inv.id), type: inv.type === 'crypto' ? 'crypto' : 'stock' });
+        }
+      }
+    }
+    if (!tickers.length) return { warmed: 0 };
+    // Deduplicate case-insensitively for stocks and lowercased for cryptos
+    const seen = new Set();
+    const unique = [];
+    for (const t of tickers) {
+      const key = t.type + ':' + (t.type === 'crypto' ? t.id.toLowerCase() : t.id.toUpperCase());
+      if (!seen.has(key)) { seen.add(key); unique.push({ id: t.id, type: t.type }); }
+    }
+    const { getCurrentQuotes } = marketData;
+    await getCurrentQuotes(unique);
+    return { warmed: unique.length };
+  } catch (e) {
+    return { warmed: 0, error: e.message };
+  }
+}
+
 async function sendWeeklySummary() {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -190,4 +223,4 @@ if (require.main === module) {
   sendWeeklySummary().then(() => process.exit());
 }
 
-module.exports = { sendWeeklySummary };
+module.exports = { sendWeeklySummary, prewarmUserAssets };
