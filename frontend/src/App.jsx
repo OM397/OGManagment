@@ -85,7 +85,8 @@ function App() {
         setInitialData(userDataResponse?.data || {});
       } catch (dataError) {
         console.warn('Error obteniendo datos del usuario:', dataError);
-        setInitialData({});
+        // No romper sesión en móvil si /user-data falla puntualmente
+        setInitialData(prev => prev || {});
       }
     } catch (error) {
       console.warn('Error verificando autenticación:', error);

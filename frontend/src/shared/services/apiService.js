@@ -55,10 +55,10 @@ apiClient.interceptors.response.use(
 
     // Si es error 401 y el request no es de auth, intentar renovar token
     if (error.response?.status === 401 && !originalRequest._retry) {
-      const errorData = error.response.data;
+      const errorData = error.response.data || {};
+      const shouldRefresh = errorData?.requiresRefresh || ['TOKEN_EXPIRED','SESSION_NOT_FOUND','MISSING_TOKEN'].includes(errorData?.code) || true; // refrescar por defecto en 401
       
-      // Verificar si es un error de token expirado que requiere refresh
-      if (errorData?.code === 'TOKEN_EXPIRED' && errorData?.requiresRefresh) {
+      if (shouldRefresh) {
         
         if (isRefreshing) {
           // Si ya estamos renovando, agregar a la cola
@@ -91,8 +91,8 @@ apiClient.interceptors.response.use(
           isRefreshing = false;
           
           // Redireccionar al login
-          sessionStorage.clear();
-          localStorage.clear();
+          try { sessionStorage.clear(); localStorage.clear(); } catch(_) {}
+          delete apiClient.defaults.headers.common['Authorization'];
           window.location.href = '/';
           
           return Promise.reject(refreshError);

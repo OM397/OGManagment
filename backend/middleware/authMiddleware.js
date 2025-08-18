@@ -14,7 +14,7 @@ module.exports = async function authMiddleware(req, res, next) {
     if (process.env.NODE_ENV !== 'production') {
       console.warn('[authMiddleware] 401 sin token: cookies=', Object.keys(req.cookies||{}), 'authHeader=', !!req.headers.authorization);
     }
-    return res.status(401).json({ error: 'Token faltante.' });
+    return res.status(401).json({ error: 'Token faltante.', code: 'MISSING_TOKEN', requiresRefresh: true });
   }
 
   try {
@@ -37,16 +37,18 @@ module.exports = async function authMiddleware(req, res, next) {
       const sessionKey = `session:${decoded.uid}:${decoded.tokenId}`;
       const exists = await redis.exists(sessionKey);
       if (!exists) {
-  if (process.env.NODE_ENV !== 'production') console.warn('[authMiddleware] 401 session redis missing', sessionKey);
-  return res.status(401).json({ error: 'Sesión no válida.', code: 'SESSION_NOT_FOUND' });
+        if (process.env.NODE_ENV !== 'production') console.warn('[authMiddleware] 401 session redis missing', sessionKey);
+        return res.status(401).json({ error: 'Sesión no válida.', code: 'SESSION_NOT_FOUND', requiresRefresh: true });
       }
+      // Touch lastAccess (best-effort)
+      try { const { updateSessionActivity } = require('../services/tokenService'); await updateSessionActivity(decoded.uid, decoded.tokenId); } catch(_) {}
     } catch (e) {
       console.warn('[authMiddleware] Redis check failed:', e.message);
     }
     req.user = decoded; // { uid, role, tokenId }
     next();
   } catch (err) {
-    if (err && err.name === 'TokenExpiredError') {
+  if (err && err.name === 'TokenExpiredError') {
       return res.status(401).json({
         error: 'Token expirado.',
         code: 'TOKEN_EXPIRED',
