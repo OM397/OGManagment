@@ -201,11 +201,20 @@ router.post('/login',
       responseBody.accessToken = accessToken;
     }
 
+    // Pre-limpieza agresiva: eliminar posibles cookies legacy para evitar colisiones (especialmente en iOS)
+    // Esto asegura que solo queden activas las cookies recién emitidas.
     res
+      .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+      .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+      .clearCookie('accessToken', COOKIE_OPTIONS)
+      .clearCookie('refreshToken', COOKIE_OPTIONS)
+      .clearCookie('token', COOKIE_OPTIONS);
+
+    return res
       .cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
       .cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
       .status(200)
-  .json(responseBody);
+      .json(responseBody);
   } catch (err) {
   // ...existing code...
     res.status(500).json({ error: 'Error del servidor.' });
@@ -240,7 +249,10 @@ router.post('/logout', async (req, res) => {
 
 // 🔄 Renovar token de acceso usando refresh token
 router.post('/refresh', refreshLimiter, async (req, res) => {
-  const refreshToken = req.cookies[REFRESH_COOKIE_NAME] || req.cookies.refreshToken || req.cookies['__Host-refreshToken'];
+  // En producción, solo aceptamos la cookie host-only para evitar revivir sesiones legacy
+  const refreshToken = IS_PROD
+    ? (req.cookies[REFRESH_COOKIE_NAME] || null)
+    : (req.cookies[REFRESH_COOKIE_NAME] || req.cookies.refreshToken || req.cookies['__Host-refreshToken']);
 
   if (!refreshToken) {
     return res.status(401).json({ 

@@ -4,6 +4,7 @@ import axios from 'axios';
 import Login from '../auth/Login';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '../../shared/config';
+import apiClient, { authAPI } from '../../shared/services/apiService';
 
 export default function AdminPanel() {
   // --- Métricas en tiempo real ---
@@ -17,11 +18,11 @@ export default function AdminPanel() {
     setMetricsLoading(true);
     try {
       const [activeUsers, recentErrors, resourceUsage, apiCalls, servicesStatus] = await Promise.all([
-        axios.get(`${API_BASE}/admin/dashboard/active-users`, { withCredentials: true }),
-        axios.get(`${API_BASE}/admin/dashboard/recent-errors`, { withCredentials: true }),
-        axios.get(`${API_BASE}/admin/dashboard/resource-usage`, { withCredentials: true }),
-        axios.get(`${API_BASE}/admin/dashboard/api-calls`, { withCredentials: true }),
-        axios.get(`${API_BASE}/admin/dashboard/services-status`, { withCredentials: true })
+        apiClient.get(`/admin/dashboard/active-users`),
+        apiClient.get(`/admin/dashboard/recent-errors`),
+        apiClient.get(`/admin/dashboard/resource-usage`),
+        apiClient.get(`/admin/dashboard/api-calls`),
+        apiClient.get(`/admin/dashboard/services-status`)
       ]);
       setMetrics({
         activeUsers: activeUsers.data.activeUsers,
@@ -45,7 +46,7 @@ export default function AdminPanel() {
   const fetchTouchLogs = async () => {
     setTouchLogsLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/admin/dashboard/touch-logs`, { withCredentials: true });
+      const res = await apiClient.get(`/admin/dashboard/touch-logs`);
       setTouchLogsEntries(res.data.entries || []);
     } catch (e) {
       setTouchLogsEntries([]);
@@ -74,7 +75,7 @@ export default function AdminPanel() {
 
   // Fetch current mailing config
   useEffect(() => {
-    axios.get(`${API_BASE}/mailing-config`, { withCredentials: true })
+    apiClient.get(`/mailing-config`)
       .then(res => {
         if (res.data?.schedule) {
           // Normalizar: si viniera legacy (weekday) migrar a weekdays
@@ -100,7 +101,7 @@ export default function AdminPanel() {
     setMailingLoading(true);
     setMailingMsg('');
     try {
-  await axios.post(`${API_BASE}/mailing-config`, { weekdays: mailingSchedule.weekdays, hour: mailingSchedule.hour, mailBody }, { withCredentials: true });
+      await apiClient.post(`/mailing-config`, { weekdays: mailingSchedule.weekdays, hour: mailingSchedule.hour, mailBody });
       setMailingMsg('✅ Configuración guardada');
     } catch (err) {
       setMailingMsg('❌ Error al guardar la configuración');
@@ -113,7 +114,7 @@ export default function AdminPanel() {
     setMailingLoading(true);
     setMailingMsg('');
     try {
-      await axios.post(`${API_BASE}/admin/manual-mailing`, {}, { withCredentials: true });
+      await apiClient.post(`/admin/manual-mailing`, {});
       setMailingMsg('✅ Mailing ejecutado manualmente');
     } catch (err) {
       setMailingMsg('❌ Error al ejecutar el mailing');
@@ -155,7 +156,7 @@ export default function AdminPanel() {
 
   const fetchUsers = async () => {
     try {
-      const { data } = await axios.get(`${API_BASE}/admin/users`, { withCredentials: true });
+      const { data } = await apiClient.get(`/admin/users`);
       setUsers(data.users || []);
     } catch (err) {
       setError('Error cargando usuarios.');
@@ -165,7 +166,7 @@ export default function AdminPanel() {
   const fetchInvestmentsOverview = async () => {
     setOverviewLoading(true);
     try {
-      const { data } = await axios.get(`${API_BASE}/admin/investments/overview`, { withCredentials: true });
+      const { data } = await apiClient.get(`/admin/investments/overview`);
       setOverview({ rows: data.rows || [], count: data.count || 0 });
     } catch (e) {
       setOverview({ rows: [], count: 0 });
@@ -174,7 +175,7 @@ export default function AdminPanel() {
 
   const handleApprove = async (username) => {
     try {
-      await axios.patch(`${API_BASE}/admin/users/${username}/approve`, {}, { withCredentials: true });
+      await apiClient.patch(`/admin/users/${username}/approve`, {});
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Error al aprobar usuario.');
@@ -183,7 +184,7 @@ export default function AdminPanel() {
 
   const handleRoleChange = async (username, newRole) => {
     try {
-      const res = await axios.patch(`${API_BASE}/admin/users/${username}/role`, { role: newRole }, { withCredentials: true });
+      const res = await apiClient.patch(`/admin/users/${username}/role`, { role: newRole });
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Error al cambiar el rol.');
@@ -192,7 +193,7 @@ export default function AdminPanel() {
 
   const handleBlockToggle = async (username, blocked) => {
     try {
-      await axios.patch(`${API_BASE}/admin/users/${username}/block`, { blocked }, { withCredentials: true });
+      await apiClient.patch(`/admin/users/${username}/block`, { blocked });
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Error al actualizar bloqueo.');
@@ -202,7 +203,7 @@ export default function AdminPanel() {
   const handleDelete = async (username) => {
     if (!window.confirm(`¿Seguro que quieres eliminar a "${username}"?`)) return;
     try {
-      await axios.delete(`${API_BASE}/admin/users/${username}`, { withCredentials: true });
+      await apiClient.delete(`/admin/users/${username}`);
       alert(`✅ Usuario "${username}" eliminado`);
       fetchUsers();
     } catch (err) {
@@ -211,16 +212,14 @@ export default function AdminPanel() {
   };
 
   const handleLogout = async () => {
-    try {
-      await axios.post(`${API_BASE}/logout`, {}, { withCredentials: true });
-    } catch (_) {}
+    try { await authAPI.logout(); } catch (_) {}
     localStorage.clear();
     sessionStorage.clear();
     navigate('/');
   };
 
   useEffect(() => {
-    axios.get(`${API_BASE}/admin-only`, { withCredentials: true })
+    apiClient.get(`/admin-only`)
       .then(res => {
         const u = res?.data?.username || res?.data?.maskedEmail || res?.data?.uid;
         if (!u) throw new Error('missing user id');
@@ -239,7 +238,7 @@ export default function AdminPanel() {
   // Cambiar preferencia de recibir mail semanal
   const handleToggleWeeklyEmail = async (username, value) => {
     try {
-      await axios.patch(`${API_BASE}/admin/users/${username}/weekly-email`, { receiveWeeklyEmail: value }, { withCredentials: true });
+      await apiClient.patch(`/admin/users/${username}/weekly-email`, { receiveWeeklyEmail: value });
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Error al actualizar preferencia de email.');
