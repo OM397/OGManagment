@@ -110,14 +110,16 @@ if (process.env.NODE_ENV === 'production') {
     useDefaults: true,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'blob:'],
+      // Permitir Google Identity Services
+      scriptSrc: ["'self'", 'https://accounts.google.com', 'https://apis.google.com'],
+      styleSrc: ["'self'", 'https://accounts.google.com'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https://accounts.google.com'],
       fontSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", 'https://accounts.google.com', 'https://oauth2.googleapis.com'],
       objectSrc: ["'none'"],
       baseUri: ["'none'"],
-      frameAncestors: ["'none'"]
+      frameAncestors: ["'none'"],
+      frameSrc: ['https://accounts.google.com']
     }
   }));
   // HSTS
@@ -132,7 +134,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Referrer-Policy and a conservative Permissions-Policy
-app.use(helmet.referrerPolicy({ policy: 'no-referrer' }));
+// Google Identity Services necesita conocer el origen; no usar 'no-referrer'.
+app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' }));
 app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
   next();

@@ -117,16 +117,19 @@ Notas de caché (servidor):
 
 ## Variables de entorno (backend)
 Ejemplo `.env` en `/backend`:
-- `NODE_ENV=development`
-- `PORT=3001`
-- `MONGODB_URI=...`
-- `JWT_SECRET=...`
-- `REDIS_URL=redis://localhost:6379`
-- `RESEND_API_KEY=` (opcional; si falta, simula)
-- `FINNHUB_API_KEY=` (opcional)
-- `TWELVE_API_KEY=` (opcional)
-- `AUTO_LOGIN_ON_REGISTER=false`
-- `RUN_SCHEDULER=true`
+
+### Google Sign-In
+
+Para habilitar login con Google:
+
+- En backend, define en `.env`:
+	- `GOOGLE_CLIENT_ID=<tu_client_id_de_oauth2>`
+	- Asegúrate de tener `JWT_SECRET` y `MONGODB_URI` configurados.
+- En frontend, define en `.env` (Vite):
+	- `VITE_GOOGLE_CLIENT_ID=<tu_client_id_de_oauth2>`
+
+El flujo usa Google Identity Services (ID token) y un endpoint `/api/google-login` que verifica el token y crea/inicia sesión de usuario con cookies httpOnly.
+
 
 ---
 

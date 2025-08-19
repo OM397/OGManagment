@@ -1,5 +1,5 @@
 // 📁 frontend/src/features/auth/Login.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../shared/services/apiService';
 
@@ -13,6 +13,66 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleInitRef = useRef(false);
+
+  // Cargar Google Identity Services script de forma dinámica
+  useEffect(() => {
+    const ensureInit = () => {
+      const client_id = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!window.google?.accounts?.id || !client_id) {
+        setGoogleReady(false);
+        return;
+      }
+      if (googleInitRef.current) {
+        setGoogleReady(true);
+        return;
+      }
+      try {
+        window.google.accounts.id.initialize({
+          client_id,
+          callback: async (response) => {
+            try {
+              const data = await authAPI.googleLogin(response.credential);
+              if (!data?.success) throw new Error('Operación fallida.');
+              localStorage.clear();
+              localStorage.setItem('username', data.email || '');
+              localStorage.setItem('role', data.role || '');
+              onLogin?.({ uid: data.uid, role: data.role });
+              if (data.role === 'admin' && location.pathname.startsWith('/admin')) {
+                navigate('/admin', { replace: true });
+              } else {
+                navigate('/', { replace: true });
+              }
+            } catch (err) {
+              const msg = err.response?.data?.error || err.message || 'Error con Google Sign-In';
+              setError(msg);
+            }
+          },
+          auto_select: false,
+          ux_mode: 'popup',
+          // Preferir FedCM cuando esté disponible (evita deprecaciones futuras)
+          use_fedcm_for_pr: true
+        });
+        googleInitRef.current = true;
+        setGoogleReady(true);
+      } catch (e) {
+        setGoogleReady(false);
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      ensureInit();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = ensureInit;
+    script.onerror = () => setGoogleReady(false);
+    document.head.appendChild(script);
+  }, [location.pathname, navigate, onLogin]);
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -76,6 +136,33 @@ export default function Login({ onLogin }) {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setError('');
+    setInfo('');
+    if (!googleReady || !window.google?.accounts?.id) {
+      setError('Google Sign-In no está disponible en este momento.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await new Promise((resolve) => {
+        window.google.accounts.id.prompt((notification) => {
+          // Si no se muestra, informamos un hint para orígenes
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            setInfo('No se pudo mostrar Google Sign-In. Verifica origen autorizado en Google Cloud y prueba en incógnito.');
+          }
+          resolve();
+        });
+      });
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Error con Google Sign-In';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="w-full max-w-xl space-y-6 p-6 bg-white rounded-2xl shadow-xl">
@@ -118,6 +205,27 @@ export default function Login({ onLogin }) {
           >
             {loading ? 'Procesando...' : forgotMode ? 'Enviar nueva contraseña' : isRegistering ? 'Registrarme' : 'Entrar'}
           </button>
+
+          {!isRegistering && !forgotMode && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">o</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading || !googleReady}
+                className={`w-full flex items-center justify-center gap-2 border border-gray-300 rounded py-2 text-sm font-medium ${
+                  loading || !googleReady ? 'bg-gray-100 text-gray-400' : 'bg-white hover:bg-gray-50 text-gray-700'
+                }`}
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="h-4 w-4" />
+                {googleReady ? 'Continuar con Google' : 'Cargando Google...'}
+              </button>
+            </div>
+          )}
 
           <div className="pt-2 border-t border-gray-100">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5 text-[11px] font-medium">
