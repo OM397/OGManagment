@@ -36,7 +36,17 @@ const apiLimiter = rateLimit({
 const authLimiter = rateLimit({
   store: isTest ? undefined : store,
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: isDev ? 100 : 50, // Límite más bajo pero razonable (50 intentos)
+  // Más permisivo y basado en usuario para evitar colisiones por IP compartidas (móvil/NAT)
+  max: isDev ? 200 : 80,
+  keyGenerator: (req /*, res */) => {
+    const body = req.body || {};
+    const u = (body.username || body.email || '').toString().toLowerCase();
+    if (u) return `u:${u}`;
+    const xff = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim();
+    return `ip:${xff || req.ip}`;
+  },
+  // Solo cuentan los intentos fallidos; si inicia sesión correctamente, no penaliza
+  skipSuccessfulRequests: true,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Demasiados intentos de autenticación. Intenta más tarde.' },
@@ -46,7 +56,7 @@ const authLimiter = rateLimit({
 const refreshLimiter = rateLimit({
   store: isTest ? undefined : store,
   windowMs: 60 * 1000, // 1 minuto
-  max: isDev ? 120 : 60,
+  max: isDev ? 180 : 90,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes de renovación.' },
