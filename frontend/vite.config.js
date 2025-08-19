@@ -23,8 +23,7 @@ export default defineConfig(({ mode }) => {
           || (mode === 'production' 
                 ? 'https://www.capitaltracker.app/api' 
                 : '/api') // ✅ dev uses Vite proxy
-  ),
-  'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(env.VITE_GOOGLE_CLIENT_ID || '')
+      )
     },
     server: {
   // Pin the dev server origin to avoid random ports (5174, 5175, ...)

@@ -110,17 +110,17 @@ if (process.env.NODE_ENV === 'production') {
     useDefaults: true,
     directives: {
       defaultSrc: ["'self'"],
-  // Allow Google Identity Services script and related network/frames
+  // Allow Google Identity Services script and resources
   scriptSrc: ["'self'", 'https://accounts.google.com'],
-  // GIS renderButton uses inline styles; allow only for styles
-  styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'blob:'],
+  styleSrc: ["'self'"],
+  imgSrc: ["'self'", 'data:', 'blob:', 'https://accounts.google.com', 'https://*.gstatic.com'],
       fontSrc: ["'self'", 'data:'],
   connectSrc: ["'self'", 'https://accounts.google.com'],
+  // Rendered button uses an iframe from accounts.google.com
+  frameSrc: ["'self'", 'https://accounts.google.com'],
       objectSrc: ["'none'"],
       baseUri: ["'none'"],
-  frameAncestors: ["'none'"],
-  frameSrc: ["'self'", 'https://accounts.google.com']
+      frameAncestors: ["'none'"]
     }
   }));
   // HSTS

@@ -31,7 +31,6 @@ export default function Login({ onLogin }) {
   // Initialize GIS and render the official button once when ready
   useEffect(() => {
     const client_id = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    try { console.log('[GSI] origin=', window.location.origin, 'client_id=', client_id); } catch {}
     if (!googleReady || !window.google?.accounts?.id || googleRenderedRef.current) return;
     if (!client_id) return;
     try {
