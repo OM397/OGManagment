@@ -25,7 +25,7 @@ const apiClient = axios.create({
 // iOS fallback: si los cookies se bloquean en iOS Safari tras un reload, usa Authorization
 // con un accessToken efímero guardado en sessionStorage. Esto NO almacena refresh token.
 try {
-  const stored = sessionStorage.getItem('accessToken');
+  const stored = localStorage.getItem('accessToken');
   if (stored && IS_IOS) {
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${stored}`;
   }
@@ -101,13 +101,13 @@ apiClient.interceptors.response.use(
 
           // Caso iOS/MISSING_TOKEN: evitar recargar en bucle. Limpiar y salir sin redirect duro.
           if (allowIOSMissing) {
-            try { sessionStorage.removeItem('accessToken'); } catch(_) {}
+            try { localStorage.removeItem('accessToken'); } catch(_) {}
             delete apiClient.defaults.headers.common['Authorization'];
             return Promise.reject(refreshError);
           }
 
           // Otros casos: redirigir a login de forma controlada
-          try { sessionStorage.clear(); localStorage.clear(); } catch(_) {}
+          try { localStorage.clear(); } catch(_) {}
           delete apiClient.defaults.headers.common['Authorization'];
           window.location.href = '/';
           return Promise.reject(refreshError);

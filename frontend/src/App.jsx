@@ -58,7 +58,7 @@ function App() {
           const { maskedEmail, uid, role } = userData;
           setUser(maskedEmail || uid);
           setRole(role);
-          try { sessionStorage.setItem('role', role); } catch (_) {}
+              try { localStorage.setItem('role', role); } catch (_) {}
           try {
             const userDataResponse = await dataAPI.getUserData();
             setInitialData(userDataResponse?.data || {});
@@ -79,7 +79,7 @@ function App() {
       const { maskedEmail, uid, role } = userData;
       setUser(maskedEmail || uid);
       setRole(role);
-      try { sessionStorage.setItem('role', role); } catch (_) {}
+          try { localStorage.setItem('role', role); } catch (_) {}
       try {
         const userDataResponse = await dataAPI.getUserData();
         setInitialData(userDataResponse?.data || {});
@@ -102,8 +102,8 @@ function App() {
       console.warn('Error verificando autenticación:', error);
       // Fallback: si hay datos en sessionStorage, considerarlos válidos temporalmente
       try {
-        const fallbackUser = sessionStorage.getItem('username');
-        const fallbackRole = sessionStorage.getItem('role');
+            const fallbackUser = localStorage.getItem('username');
+            const fallbackRole = localStorage.getItem('role');
         if (fallbackUser && fallbackRole) {
           console.log('[App] Usando fallback de sessionStorage');
           setUser(fallbackUser);

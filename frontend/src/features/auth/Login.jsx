@@ -53,9 +53,9 @@ export default function Login({ onLogin }) {
   console.log('[Login] Enviando credenciales...');
   const data = await authAPI.login(trimmedUsername, trimmedPassword);
         if (!data?.success) throw new Error('Operación fallida.');
-        localStorage.clear();
-        sessionStorage.setItem('username', trimmedUsername);
-        sessionStorage.setItem('role', data.role || '');
+  localStorage.clear();
+  localStorage.setItem('username', trimmedUsername);
+  localStorage.setItem('role', data.role || '');
   // Actualización optimista inmediata para re-render sin esperar /user
         onLogin?.({ uid: data.uid, role: data.role });
   console.log('[Login] Éxito. uid=', data.uid, 'role=', data.role, 'tokenId=', data.tokenId);
