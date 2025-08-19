@@ -118,6 +118,12 @@ router.post('/register',
   try { await TokenService.storeSession(newUser.publicId, tokenId, deviceInfo); } catch (e) { /* Error storeSession autoLogin */ }
         body = { ...body, role: 'user', tokenId, autoLogin: true };
         return res
+          // Limpieza defensiva de cualquier cookie legacy
+          .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+          .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+          .clearCookie('accessToken', COOKIE_OPTIONS)
+          .clearCookie('refreshToken', COOKIE_OPTIONS)
+          .clearCookie('token', COOKIE_OPTIONS)
           .cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
           .cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
           .status(201)
@@ -126,6 +132,11 @@ router.post('/register',
 
       // Asegurar que no queden cookies previas (si el navegador tenía sesión de otro usuario)
       res
+        .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+        .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+        .clearCookie('accessToken', COOKIE_OPTIONS)
+        .clearCookie('refreshToken', COOKIE_OPTIONS)
+        .clearCookie('token', COOKIE_OPTIONS)
         .clearCookie(ACCESS_COOKIE_NAME, COOKIE_OPTIONS)
         .clearCookie(REFRESH_COOKIE_NAME, COOKIE_OPTIONS)
         .status(201)

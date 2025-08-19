@@ -26,7 +26,26 @@ async function fetchIRRShared() {
   }
   isFetching = true;
   lastError = null;
-  pendingPromise = apiClient.get('/investments/irr')
+  // One-shot retry on auth errors to avoid races just-after-login
+  const doFetch = async (allowRefresh = true) => {
+    try {
+      const res = await apiClient.get('/investments/irr');
+      return res;
+    } catch (err) {
+      const status = err?.response?.status;
+      if (allowRefresh && (status === 401 || status === 403)) {
+        try {
+          await apiClient.post('/refresh');
+          return await apiClient.get('/investments/irr');
+        } catch (e) {
+          throw err; // bubble original error
+        }
+      }
+      throw err;
+    }
+  };
+
+  pendingPromise = doFetch(true)
     .then((res) => {
       cachedIrr = res.data?.irr || {};
       notifyAll(cachedIrr, null);

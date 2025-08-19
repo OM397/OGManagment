@@ -685,26 +685,27 @@ async function getCurrentQuotes(tickers) {
   }
 
   // FX conversion
-  if (currencies.size) {
-    try {
-      const fxRates = await getFXRates([...currencies]);
-      for (const [ticker, data] of Object.entries(result.stocks)) {
-        if (data.currency && data.currency !== 'EUR' && fxRates[data.currency]) {
-          const rate = fxRates[data.currency];
-          data.eur = +(data.rawPrice / rate).toFixed(4);
-          if (data.marketCap != null && !isNaN(data.marketCap)) {
-            data.marketCapEur = +(data.marketCap / rate).toFixed(0);
-          }
-        } else if (data.currency === 'EUR') {
-          data.eur = data.rawPrice;
-          if (data.marketCap != null && !isNaN(data.marketCap)) {
-            data.marketCapEur = data.marketCap;
-          }
+  try {
+    const fxRates = currencies.size ? await getFXRates([...currencies]) : {};
+    for (const [ticker, data] of Object.entries(result.stocks)) {
+      if (data.currency === 'EUR') {
+        // Always set EUR directly even if no FX requested
+        data.eur = data.rawPrice;
+        if (data.marketCap != null && !isNaN(data.marketCap)) {
+          data.marketCapEur = data.marketCap;
+        }
+        continue;
+      }
+      if (data.currency && fxRates[data.currency]) {
+        const rate = fxRates[data.currency];
+        data.eur = +(data.rawPrice / rate).toFixed(4);
+        if (data.marketCap != null && !isNaN(data.marketCap)) {
+          data.marketCapEur = +(data.marketCap / rate).toFixed(0);
         }
       }
-    } catch (err) {
-      console.error('❌ FX conversion failed:', err.message);
     }
+  } catch (err) {
+    console.error('❌ FX conversion failed:', err.message);
   }
 
   // Add provider statistics

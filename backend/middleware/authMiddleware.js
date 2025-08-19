@@ -4,11 +4,12 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 module.exports = async function authMiddleware(req, res, next) {
   // Accept modern cookie 'accessToken', fallback to legacy 'token', or Bearer header
-  const cookieToken = req.cookies?.['__Host-accessToken'] || req.cookies?.accessToken || req.cookies?.token;
+  // Prefer explicit Authorization header over cookies to avoid stale/legacy cookie collisions
   const headerToken = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.split(' ')[1]
     : null;
-  const token = cookieToken || headerToken;
+  const cookieToken = req.cookies?.['__Host-accessToken'] || req.cookies?.accessToken || req.cookies?.token;
+  const token = headerToken || cookieToken;
 
   if (!token) {
     if (process.env.NODE_ENV !== 'production') {

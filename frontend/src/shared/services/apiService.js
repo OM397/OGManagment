@@ -141,15 +141,26 @@ export const authAPI = {
    */
   async googleLogin(credential) {
     const response = await apiClient.post('/google-login', { credential });
-    return response.data;
+    const data = response.data;
+    if (data?.accessToken) {
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+      try { if (IS_IOS) sessionStorage.setItem('accessToken', data.accessToken); } catch (_) {}
+    } else {
+      delete apiClient.defaults.headers.common['Authorization'];
+    }
+    return data;
   },
 
   /**
    * Registrar usuario
    */
   async register(email) {
-    const response = await apiClient.post('/register', { email });
-    return response.data;
+  const response = await apiClient.post('/register', { email });
+  // Tras registrar NO hay sesión por defecto (a menos que el backend haga auto-login).
+  // Limpiamos cualquier rastro de Authorization previo para evitar 403 con cuentas nuevas.
+  try { sessionStorage.clear(); localStorage.clear(); } catch (_) {}
+  delete apiClient.defaults.headers.common['Authorization'];
+  return response.data;
   },
 
   /**

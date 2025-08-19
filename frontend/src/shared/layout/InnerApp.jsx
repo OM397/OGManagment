@@ -29,8 +29,8 @@ export default function InnerApp({ user, onLogout }) {
   currentPriceIntervalMs: 60000,   // precios cada 60s
   fxThrottleMs: 200000,            // FX cada 200s
   fxPollMs: 200000,                // polling FX cada 200s
-  startupBurstCount: 2,            // 2 bursts iniciales
-  startupBurstSpacingMs: 20000     // separados 20s
+  startupBurstCount: 3,            // 3 bursts iniciales
+  startupBurstSpacingMs: 10000     // separados 10s
   });
 
   // Expose the freshest marketData globally for components that read window.marketDataGlobal (e.g., chart last-point patch)

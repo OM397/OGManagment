@@ -36,6 +36,8 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0, options
   const [didInitialFetch, setDidInitialFetch] = useState(false);
   // Ensure we fetch FX once on session start from backend (authoritative), then rely on throttle
   const didInitialFxFetchRef = useRef(false);
+  // Track last set of requested tickers to fetch immediately on portfolio changes
+  const lastTickersSigRef = useRef('');
 
   // Seed FX from localStorage immediately on mount (fast UI) while waiting for live /fx
   useEffect(() => {
@@ -209,10 +211,18 @@ export default function useMarketData(categoryGroups, reloadTrigger = 0, options
     };
 
   const payload = collectTickers();
-  // Perform the very first fetch only once when we actually have tickers (avoid empty initial call).
+  const currentSig = payload.tickers.map(t => `${t.type}:${t.id}`).sort().join('|');
+  // Initial fetch when tickers become available
   if (!didInitialFetch && payload.tickers.length) {
-  fetchMarketData(payload);
+    fetchMarketData(payload);
     setDidInitialFetch(true);
+    lastTickersSigRef.current = currentSig;
+  } else if (didInitialFetch && payload.tickers.length) {
+    // If the set of tickers changed (e.g., user added/removed an investment), fetch immediately
+    if (currentSig !== lastTickersSigRef.current) {
+      lastTickersSigRef.current = currentSig;
+      fetchMarketData(payload);
+    }
   }
 
   // Refresh current prices on a configurable cadence (default 120000 ms)
