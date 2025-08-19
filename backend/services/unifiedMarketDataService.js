@@ -59,46 +59,56 @@ const HISTORY_TTL = 86400; // 24 hours instead of 12
 const FRESH_CACHE_THRESHOLD = 300; // Consider cache "fresh" for 5 minutes
 
 // EXCHANGE RATES
-async function getFXRates(currencies) {
+async function getFXRates(currencies = []) {
   console.log('🌍 Getting FX Rates for:', currencies);
-  const cache = await redis.get(FX_CACHE_KEY);
-  if (cache) {
-    console.log('📦 FX Rates from cache');
-    return JSON.parse(cache);
+  const requested = Array.from(new Set((currencies || []).map(c => String(c).toUpperCase()).filter(c => c && c !== 'EUR')));
+  let cached = null;
+  try { const raw = await redis.get(FX_CACHE_KEY); if (raw) cached = JSON.parse(raw); } catch (_) {}
+  if (!cached) cached = {};
+  const have = new Set(Object.keys(cached));
+  const missing = requested.filter(c => !have.has(c));
+  if (!missing.length) {
+    if (requested.length) console.log('📦 FX fully from cache');
+    return cached;
   }
-
-  const symbols = currencies.filter(c => c !== 'EUR').join(',');
-  const res = await axios.get('https://api.frankfurter.app/latest', {
-    params: { from: 'EUR', to: symbols }
-  });
-
-  console.log('📈 FX Rates API response:', res.data);
-  await redis.set(FX_CACHE_KEY, JSON.stringify(res.data?.rates), 'EX', FX_TTL);
-  // store lightweight meta for cache provenance (do not change the main cache shape)
   try {
-    await redis.set(FX_META_KEY, JSON.stringify({ provider: 'frankfurter', fetchedAt: new Date().toISOString() }), 'EX', FX_TTL);
-  } catch (_) {}
-  return res.data?.rates;
+    const symbols = missing.join(',');
+    if (symbols) {
+      const res = await axios.get('https://api.frankfurter.app/latest', { params: { from: 'EUR', to: symbols } });
+      const merged = { ...cached, ...(res.data?.rates || {}) };
+      await redis.set(FX_CACHE_KEY, JSON.stringify(merged), 'EX', FX_TTL);
+      try { await redis.set(FX_META_KEY, JSON.stringify({ provider: 'frankfurter', fetchedAt: new Date().toISOString() }), 'EX', FX_TTL); } catch (_) {}
+      return merged;
+    }
+  } catch (e) {
+    console.error('❌ FX fetch/merge failed:', e.message);
+  }
+  return cached;
 }
 
 // Admin/reporting helper: FX with source metadata
-async function getFXRatesWithSource(currencies) {
-  const cache = await redis.get(FX_CACHE_KEY);
-  if (cache) {
-    let meta = null;
-    try { const m = await redis.get(FX_META_KEY); if (m) meta = JSON.parse(m); } catch (_) {}
-    return { rates: JSON.parse(cache), source: 'cache', cacheFrom: meta?.provider || 'frankfurter', fetchedAt: meta?.fetchedAt || null };
+async function getFXRatesWithSource(currencies = []) {
+  const requested = Array.from(new Set((currencies || []).map(c => String(c).toUpperCase()).filter(c => c && c !== 'EUR')));
+  let cached = null; let meta = null;
+  try { const raw = await redis.get(FX_CACHE_KEY); if (raw) cached = JSON.parse(raw); const m = await redis.get(FX_META_KEY); if (m) meta = JSON.parse(m); } catch (_) {}
+  if (!cached) cached = {};
+  const have = new Set(Object.keys(cached));
+  const missing = requested.filter(c => !have.has(c));
+  if (!missing.length) {
+    return { rates: cached, source: 'cache', cacheFrom: meta?.provider || 'frankfurter', fetchedAt: meta?.fetchedAt || null };
   }
-  const symbols = currencies.filter(c => c !== 'EUR').join(',');
-  const res = await axios.get('https://api.frankfurter.app/latest', {
-    params: { from: 'EUR', to: symbols }
-  });
-  const rates = res.data?.rates || {};
-  await redis.set(FX_CACHE_KEY, JSON.stringify(rates), 'EX', FX_TTL);
   try {
-    await redis.set(FX_META_KEY, JSON.stringify({ provider: 'frankfurter', fetchedAt: new Date().toISOString() }), 'EX', FX_TTL);
-  } catch (_) {}
-  return { rates, source: 'live', cacheFrom: 'frankfurter', fetchedAt: new Date().toISOString() };
+    const symbols = missing.join(',');
+    const res = symbols ? await axios.get('https://api.frankfurter.app/latest', { params: { from: 'EUR', to: symbols } }) : { data: { rates: {} } };
+    const merged = { ...cached, ...(res.data?.rates || {}) };
+    await redis.set(FX_CACHE_KEY, JSON.stringify(merged), 'EX', FX_TTL);
+    const newMeta = { provider: 'frankfurter', fetchedAt: new Date().toISOString() };
+    try { await redis.set(FX_META_KEY, JSON.stringify(newMeta), 'EX', FX_TTL); } catch (_) {}
+    return { rates: merged, source: 'live', cacheFrom: 'frankfurter', fetchedAt: newMeta.fetchedAt };
+  } catch (e) {
+    console.error('❌ FX fetch (with source) failed:', e.message);
+    return { rates: cached, source: 'cache', cacheFrom: meta?.provider || 'frankfurter', fetchedAt: meta?.fetchedAt || null };
+  }
 }
 
 // OPTIMIZED PRICE FETCHING WITH RATE LIMITING
