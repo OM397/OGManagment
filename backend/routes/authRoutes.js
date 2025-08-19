@@ -21,7 +21,7 @@ const REFRESH_COOKIE_NAME = IS_PROD ? '__Host-refreshToken' : 'refreshToken';
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: IS_PROD ? 'None' : 'Lax',
+  sameSite: 'Lax', // Cambiado de 'None' a 'Lax' para mayor compatibilidad
   path: '/'
   // Note: no domain on purpose (host-only)
 };
