@@ -56,7 +56,7 @@ const FX_TTL = 3600;
 // Extended TTL for better caching
 const PRICE_TTL = 900; // 15 minutes instead of 5
 const HISTORY_TTL = 86400; // 24 hours instead of 12
-const FRESH_CACHE_THRESHOLD = 180; // Consider cache "fresh" for 3 minutes
+const FRESH_CACHE_THRESHOLD = 300; // Consider cache "fresh" for 5 minutes
 
 // EXCHANGE RATES
 async function getFXRates(currencies) {
