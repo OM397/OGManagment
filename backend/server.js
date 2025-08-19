@@ -156,6 +156,14 @@ app.get('/api/history', (req, res, next) => {
   next();
 }, tickersHistoryController.getHistoricalData);
 
+// ✅ Public, unauthenticated endpoints must be declared BEFORE any '/api' routers
+app.get('/api/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+app.get('/api/public-config', (req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null
+  });
+});
+
 
 // Public lightweight data routes first (avoid accidental auth interception)
 app.use('/api', performanceRoutes);
@@ -169,14 +177,6 @@ app.use('/api/mailing-config', mailingConfigRoutes);
 app.use('/api/admin', adminMailingRoutes);
 // performance already mounted early
 
-// 🔍 Debug endpoint
-app.get('/api/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
-// Public config endpoint (exposes only safe, non-secret values)
-app.get('/api/public-config', (req, res) => {
-  res.json({
-    googleClientId: process.env.GOOGLE_CLIENT_ID || null
-  });
-});
 // Basic metrics (JSON). For Prometheus you can adapt formatting.
 app.get('/api/metrics', (req, res) => {
   res.json({
