@@ -47,25 +47,27 @@ exports.searchStocks = async (req, res) => {
     console.log('🔍 Searching stocks for:', query);
     let stocks = [];
 
-    const tdResults = await twelveData.searchSymbol(query);
-    if (Array.isArray(tdResults)) {
-      stocks = tdResults.map(item => ({
+    // 1) Try Yahoo first (better coverage and naming)
+    const yf = await yahooFinance.search(query);
+    stocks = (yf?.quotes || [])
+      .filter(item => item.symbol && (item.shortname || item.longname))
+      .map(item => ({
         symbol: item.symbol,
-        name: item.instrument_name || item.description || item.symbol,
-        description: item.instrument_name || item.description || item.symbol
+        name: item.longname || item.shortname || item.symbol,
+        description: item.longname || item.shortname || item.symbol
       }));
-    }
 
+    // 2) Fallback to TwelveData if Yahoo didn't return usable results
     if (stocks.length === 0) {
-      console.log('🔁 Falling back to Yahoo Finance search');
-      const fallback = await yahooFinance.search(query);
-      stocks = (fallback?.quotes || [])
-        .filter(item => item.symbol && (item.shortname || item.longname))
-        .map(item => ({
+      console.log('🔁 Falling back to TwelveData search');
+      const tdResults = await twelveData.searchSymbol(query);
+      if (Array.isArray(tdResults)) {
+        stocks = tdResults.map(item => ({
           symbol: item.symbol,
-          name: item.longname || item.shortname || item.symbol,
-          description: item.longname || item.shortname || item.symbol
+          name: item.instrument_name || item.description || item.symbol,
+          description: item.instrument_name || item.description || item.symbol
         }));
+      }
     }
 
     console.log(`✅ Found ${stocks.length} result(s)`);
