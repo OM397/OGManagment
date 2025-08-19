@@ -137,19 +137,6 @@ export const authAPI = {
   },
 
   /**
-   * Login con Google Identity Services (credential = ID token)
-   */
-  async googleLogin(credential) {
-    const response = await apiClient.post('/google-login', { credential });
-    const data = response.data;
-    if (data?.accessToken) {
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
-      try { sessionStorage.setItem('accessToken', data.accessToken); } catch (_) {}
-    }
-    return data;
-  },
-
-  /**
    * Registrar usuario
    */
   async register(email) {
