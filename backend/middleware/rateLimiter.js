@@ -1,50 +1,55 @@
 // 📁 backend/middleware/rateLimiter.js
-const rateLimit = require('express-rate-limit');
+const { rateLimit } = require('express-rate-limit');
+// Import compatible con CJS para rate-limit-redis v4 (named export)
+const { RedisStore } = require('rate-limit-redis');
+const redisClient = require('../redisClient');
 
 const isTest = process.env.NODE_ENV === 'test';
 const isDev = process.env.NODE_ENV !== 'production' && !isTest;
 
-// General API limiter
+// Crea el almacén de rate-limit en Redis solo si hay un cliente real (ioredis)
+// y así evitamos errores en local cuando usamos el shim en memoria.
+let store;
+const isIoredis = typeof redisClient?.call === 'function';
+const isReady = isIoredis && (redisClient?.status === 'ready' || redisClient?.status === 'connect' || redisClient?.status === 'connecting');
+const useRedis = !!process.env.REDIS_URL && isIoredis && isReady;
+if (useRedis) {
+  store = new RedisStore({
+    // ioredis expone `.call(command, ...args)` para comandos crudos
+    sendCommand: (...args) => redisClient.call(...args),
+    // Prefijo para evitar colisiones de claves
+    prefix: 'rl:',
+  });
+}
+
+// Limitador general y permisivo para toda la API
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isDev ? 2000 : 1500,
-  standardHeaders: true,
+  store: isTest ? undefined : store, // Redis si está disponible y no es test; si no, memoria
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: isDev ? 5000 : 1500, // Límite alto para uso normal
+  standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes. Intenta más tarde.' },
-  skip: (req) => {
-    const url = req.originalUrl || req.url || '';
-    return /\/api\/(login|refresh|register|forgot-password)(\/|$)/.test(url);
-  },
-  handler: (req, res, next, options) => {
-    if (!isDev) console.warn('[RATE-LIMIT][API]', req.ip, req.path);
-    res.status(options.statusCode).json(options.message);
-  }
 });
 
-// Auth-specific limiter (login/register)
+// Limitador más estricto para rutas de autenticación sensibles
 const authLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: isDev ? 100 : 10,
-  standardHeaders: true,
+  store: isTest ? undefined : store,
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: isDev ? 100 : 50, // Límite más bajo pero razonable (50 intentos)
+  standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Demasiados intentos de autenticación. Intenta más tarde.' },
-  handler: (req, res, next, options) => {
-    if (!isDev) console.warn('[RATE-LIMIT][AUTH]', req.ip, req.path);
-    res.status(options.statusCode).json(options.message);
-  }
 });
 
-// Refresh token limiter
+// Limitador para la ruta de refresco de token
 const refreshLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: isDev ? 120 : 60, // <-- subido de 20 a 60 en producción
-  standardHeaders: true,
+  store: isTest ? undefined : store,
+  windowMs: 60 * 1000, // 1 minuto
+  max: isDev ? 120 : 60,
+  standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes de renovación.' },
-  handler: (req, res, next, options) => {
-    if (!isDev) console.warn('[RATE-LIMIT][REFRESH]', req.ip, req.path);
-    res.status(options.statusCode).json(options.message);
-  }
 });
 
 module.exports = { apiLimiter, authLimiter, refreshLimiter };

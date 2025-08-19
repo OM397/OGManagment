@@ -139,6 +139,9 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting global de API
+// El apiLimiter se aplica a todo, y los limitadores más específicos
+// (authLimiter, etc.) se aplican dentro de sus respectivos archivos de rutas.
+// La nueva configuración con Redis Store asegura que funcionen correctamente.
 app.use('/api', apiLimiter);
 
 // ✅ Explicit public /api/history route (defensive: ensure no auth middleware intercepts)
