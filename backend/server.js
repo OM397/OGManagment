@@ -171,6 +171,12 @@ app.use('/api/admin', adminMailingRoutes);
 
 // 🔍 Debug endpoint
 app.get('/api/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+// Public config endpoint (exposes only safe, non-secret values)
+app.get('/api/public-config', (req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null
+  });
+});
 // Basic metrics (JSON). For Prometheus you can adapt formatting.
 app.get('/api/metrics', (req, res) => {
   res.json({

@@ -30,9 +30,17 @@ export default function Login({ onLogin }) {
 
   // Initialize GIS and render the official button once when ready
   useEffect(() => {
-    const client_id = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!googleReady || !window.google?.accounts?.id || googleRenderedRef.current) return;
-    if (!client_id) return;
+    const init = async () => {
+      let client_id = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!client_id) {
+        try {
+          const res = await fetch('/api/public-config', { credentials: 'include' });
+          const json = await res.json();
+          client_id = json?.googleClientId || '';
+        } catch (_) { /* ignore */ }
+      }
+      if (!googleReady || !window.google?.accounts?.id || googleRenderedRef.current) return;
+      if (!client_id) return;
     try {
       window.google.accounts.id.initialize({
         client_id,
@@ -67,7 +75,9 @@ export default function Login({ onLogin }) {
       googleRenderedRef.current = true;
     } catch {
       // ignore init errors; user can retry by reloading
-    }
+      }
+    };
+    init();
   }, [googleReady, location.pathname, navigate, onLogin]);
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
