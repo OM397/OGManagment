@@ -112,7 +112,9 @@ if (process.env.NODE_ENV === 'production') {
       defaultSrc: ["'self'"],
   // Allow Google Identity Services script and resources
   scriptSrc: ["'self'", 'https://accounts.google.com'],
-  styleSrc: ["'self'"],
+  // GIS renderButton injects inline styles; allow only styles to use 'unsafe-inline'
+  // Scripts remain strictly non-inline.
+  styleSrc: ["'self'", "'unsafe-inline'"],
   imgSrc: ["'self'", 'data:', 'blob:', 'https://accounts.google.com', 'https://*.gstatic.com'],
       fontSrc: ["'self'", 'data:'],
   connectSrc: ["'self'", 'https://accounts.google.com'],
