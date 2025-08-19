@@ -110,14 +110,16 @@ if (process.env.NODE_ENV === 'production') {
     useDefaults: true,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
+  // Allow Google Identity Services script and related network/frames
+  scriptSrc: ["'self'", 'https://accounts.google.com'],
+  styleSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
       fontSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
+  connectSrc: ["'self'", 'https://accounts.google.com'],
       objectSrc: ["'none'"],
       baseUri: ["'none'"],
-      frameAncestors: ["'none'"]
+  frameAncestors: ["'none'"],
+  frameSrc: ["'self'", 'https://accounts.google.com']
     }
   }));
   // HSTS
