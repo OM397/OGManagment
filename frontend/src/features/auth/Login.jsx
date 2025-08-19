@@ -1,5 +1,5 @@
 // 📁 frontend/src/features/auth/Login.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../shared/services/apiService';
 
@@ -13,6 +13,63 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleBtnRef = useRef(null);
+  const googleRenderedRef = useRef(false);
+
+  // Carga dinámica del script de Google Identity (no requiere CSP inline)
+  useEffect(() => {
+    if (window.google?.accounts?.id) { setGoogleReady(true); return; }
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = () => setGoogleReady(true);
+    s.onerror = () => setGoogleReady(false);
+    document.head.appendChild(s);
+  }, []);
+
+  // Initialize GIS and render the official button once when ready
+  useEffect(() => {
+    const client_id = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    try { console.log('[GSI] origin=', window.location.origin, 'client_id=', client_id); } catch {}
+    if (!googleReady || !window.google?.accounts?.id || googleRenderedRef.current) return;
+    if (!client_id) return;
+    try {
+      window.google.accounts.id.initialize({
+        client_id,
+        callback: async ({ credential }) => {
+          try {
+            const data = await authAPI.googleLogin(credential);
+            if (!data?.success) throw new Error('Operación fallida.');
+            localStorage.clear();
+            localStorage.setItem('username', data.email || '');
+            localStorage.setItem('role', data.role || '');
+            onLogin?.({ uid: data.uid, role: data.role });
+            if (data.role === 'admin' && location.pathname.startsWith('/admin')) navigate('/admin', { replace: true });
+            else navigate('/', { replace: true });
+          } catch (e) {
+            const msg = e.response?.data?.error || e.message || 'Error con Google';
+            setError(msg);
+          }
+        },
+        ux_mode: 'popup',
+        auto_select: false,
+        use_fedcm_for_pr: false
+      });
+      if (googleBtnRef.current) {
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          type: 'standard',
+          size: 'large',
+          theme: 'outline',
+          text: 'continue_with',
+          shape: 'pill'
+        });
+      }
+      googleRenderedRef.current = true;
+    } catch {
+      // ignore init errors; user can retry by reloading
+    }
+  }, [googleReady, location.pathname, navigate, onLogin]);
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -118,6 +175,27 @@ export default function Login({ onLogin }) {
           >
             {loading ? 'Procesando...' : forgotMode ? 'Enviar nueva contraseña' : isRegistering ? 'Registrarme' : 'Entrar'}
           </button>
+
+          {!isRegistering && !forgotMode && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">o</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              {/* Official Google button mount point */}
+              <div ref={googleBtnRef} className="flex justify-center" />
+              {!googleReady && (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded py-2 text-sm font-medium bg-gray-100 text-gray-400"
+                >
+                  Cargando Google...
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="pt-2 border-t border-gray-100">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5 text-[11px] font-medium">

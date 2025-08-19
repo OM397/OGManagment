@@ -10,6 +10,7 @@ const TokenService = require('../services/tokenService');
 const ValidationMiddleware = require('../middleware/validation');
 
 const router = express.Router();
+const { OAuth2Client } = require('google-auth-library');
 const EXPOSE_ACCESS_TOKEN = ((process.env.EXPOSE_ACCESS_TOKEN || '').toLowerCase() === 'true');
 
 // Host-only cookies (no domain) are more reliable on iOS/Safari/WebViews.
@@ -218,6 +219,76 @@ router.post('/login',
   } catch (err) {
   // ...existing code...
     res.status(500).json({ error: 'Error del servidor.' });
+  }
+});
+
+// 🔐 Login con Google (GIS - ID token)
+router.post('/google-login', authLimiter, async (req, res) => {
+  try {
+    const { credential } = req.body || {};
+    if (!credential) return res.status(400).json({ error: 'Falta credential.' });
+
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    if (!GOOGLE_CLIENT_ID) return res.status(500).json({ error: 'Falta GOOGLE_CLIENT_ID en el servidor.' });
+
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+    let ticket;
+    try {
+      ticket = await client.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+    } catch (e) {
+      return res.status(401).json({ error: 'ID token inválido.' });
+    }
+
+    const payload = ticket.getPayload() || {};
+    const email = (payload.email || '').toLowerCase();
+    const emailVerified = !!payload.email_verified;
+    if (!email || !emailVerified) {
+      return res.status(401).json({ error: 'Cuenta de Google no verificada.' });
+    }
+
+    let user = await User.findOne({ username: email });
+    if (!user) {
+      // Crear cuenta nueva con contraseña temporal y enviar correo de bienvenida
+      const tempPassword = crypto.randomBytes(6).toString('base64').slice(0, 10);
+      const hash = await bcrypt.hash(tempPassword, 12);
+      user = new User({ username: email, password: hash, role: 'user', approved: true });
+      await user.save();
+      try {
+        await sendWelcomeEmail(email, tempPassword);
+      } catch (e) {
+        // En dev podemos fallar silenciosamente; el usuario podrá usar "Olvidé mi contraseña".
+      }
+    }
+
+    if (user.blocked) return res.status(403).json({ error: 'Usuario bloqueado.' });
+
+    user.lastLogin = new Date();
+    await user.save();
+
+    const { accessToken, refreshToken, tokenId } = TokenService.generateTokenPair({ uid: user.publicId, role: user.role });
+    try {
+      await TokenService.storeSession(user.publicId, tokenId, { userAgent: req.headers['user-agent'], ip: req.ip || req.connection.remoteAddress });
+    } catch {}
+
+    const responseBody = { success: true, uid: user.publicId, role: user.role, tokenId, email };
+    if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production' || EXPOSE_ACCESS_TOKEN) {
+      responseBody.accessToken = accessToken;
+    }
+
+    res
+      .clearCookie('__Host-accessToken', COOKIE_OPTIONS)
+      .clearCookie('__Host-refreshToken', COOKIE_OPTIONS)
+      .clearCookie('accessToken', COOKIE_OPTIONS)
+      .clearCookie('refreshToken', COOKIE_OPTIONS)
+      .clearCookie('token', COOKIE_OPTIONS);
+
+    return res
+      .cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
+      .cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
+      .status(200)
+      .json(responseBody);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error en login con Google.' });
   }
 });
 

@@ -26,6 +26,11 @@ export default defineConfig(({ mode }) => {
       )
     },
     server: {
+  // Pin the dev server origin to avoid random ports (5174, 5175, ...)
+  // which would not be authorized in the Google OAuth client.
+  port: 5173,
+  strictPort: true,
+  host: 'localhost',
       proxy: {
         '/api': {
           target: 'http://localhost:3001',

@@ -137,6 +137,14 @@ export const authAPI = {
   },
 
   /**
+   * Login con Google (credential = ID token)
+   */
+  async googleLogin(credential) {
+    const response = await apiClient.post('/google-login', { credential });
+    return response.data;
+  },
+
+  /**
    * Registrar usuario
    */
   async register(email) {
