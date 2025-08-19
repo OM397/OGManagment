@@ -183,12 +183,12 @@ export default function Login({ onLogin }) {
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
               {/* Official Google button mount point */}
-              <div ref={googleBtnRef} className="flex justify-center" />
+              <div ref={googleBtnRef} className="justify-center" />
               {!googleReady && (
                 <button
                   type="button"
                   disabled
-                  className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded py-2 text-sm font-medium bg-gray-100 text-gray-400"
+                  className="w-full items-center justify-center gap-2 border border-gray-300 rounded py-2 text-sm font-medium bg-gray-100 text-gray-400"
                 >
                   Cargando Google...
                 </button>
