@@ -6,8 +6,8 @@ const { getCurrentQuotes, fetchPerformanceMetrics, fetchHistory } = require('../
 const CRYPTOS = [ 'bitcoin','ethereum','solana','ripple','cardano' ];
 const STOCKS  = [ 'AAPL','MSFT','NVDA','QQQ','SPY' ];
 
-// Refresh every 12h (2 veces al día)
-const REFRESH_MS = 12 * 60 * 60 * 1000;
+// Refresh every 1h (más frecuente para mejor seguimiento)
+const REFRESH_MS = 1 * 60 * 60 * 1000;
 const CACHE_KEY = 'marketSummary:v1';
 const LAST_GOOD_KEY = 'marketSummary:lastGood';
 
@@ -154,6 +154,18 @@ exports.getMarketSummary = async (req, res) => {
 
 // Export buildSummary for internal jobs (weekly email, etc.)
 module.exports.buildSummary = buildSummary;
+
+// Función para limpiar cache (útil para cambios de configuración)
+module.exports.clearCache = async function clearCache() {
+  try {
+    await redis.del(CACHE_KEY);
+    console.log('✅ Market Summary cache cleared');
+    return true;
+  } catch (e) {
+    console.error('❌ Error clearing Market Summary cache:', e.message);
+    return false;
+  }
+};
 
 // Precalienta y guarda en caché un Market Summary fresco (force=true)
 // Retorna el summary generado o lanza si falla y no existe last-good.

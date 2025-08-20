@@ -8,6 +8,7 @@ router.get('/tickers', tickersController.getTickers);
 router.get('/search-stocks', tickersController.searchStocks);
 router.post('/market-data', tickersController.getMarketData);
 router.get('/market-summary', marketSummaryController.getMarketSummary);
+router.post('/market-summary/clear-cache', marketSummaryController.clearCache);
 router.get('/fx', getFxRates);
 
 module.exports = router;

@@ -326,10 +326,26 @@ function MarketSummary() {
   }, []);
 
   React.useEffect(() => { load(false); }, [load]);
+  
+  // Auto-refresh cada 5 minutos (300000ms)
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      load(false); // No forzar, usar cache si está fresco
+    }, 300000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   return (
     <section className="space-y-3">
-  <h3 className="text-sm font-semibold text-gray-800">Market Summary {updatedAt && <span className="ml-2 text-xs font-normal text-gray-400">(updated {new Date(updatedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})</span>}</h3>
+  <h3 className="text-sm font-semibold text-gray-800">
+    Market Summary 
+    {updatedAt && (
+      <span className="ml-2 text-xs font-normal text-gray-400">
+        (actualizado {new Date(updatedAt).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})})
+      </span>
+    )}
+    {loading && <span className="ml-2 text-xs text-blue-500">🔄 Actualizando...</span>}
+  </h3>
       {error && <div className="text-xs text-red-600">Error: {error}</div>}
       <div className="overflow-auto border rounded-lg bg-white shadow-sm">
         <table className="min-w-full text-xs">
