@@ -8,7 +8,17 @@ const CategoryGroupsContext = createContext();
 export const useCategoryGroups = () => useContext(CategoryGroupsContext);
 
 export const CategoryGroupsProvider = ({ initialData, children }) => {
-  const [categoryGroups, setCategoryGroupsState] = useState(null);
+  const [categoryGroups, setCategoryGroupsState] = useState(() => {
+    // Inicializar con datos por defecto si no hay initialData
+    if (initialData) {
+      return initialData;
+    }
+    return {
+      Investments: {},
+      'Real Estate': {},
+      Others: {}
+    };
+  });
   const timeoutRef = useRef(null);
   const isInitialLoadDone = useRef(false);
   // Track last pending snapshot to flush on unload
@@ -77,9 +87,11 @@ export const CategoryGroupsProvider = ({ initialData, children }) => {
   };
 
   useEffect(() => {
-    if (!isInitialLoadDone.current && initialData) {
+    if (initialData) {
       setCategoryGroupsState(initialData);
-      isInitialLoadDone.current = true;
+      if (!isInitialLoadDone.current) {
+        isInitialLoadDone.current = true;
+      }
     }
   }, [initialData]);
 

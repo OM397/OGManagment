@@ -4,7 +4,7 @@
 // para solucionar un bug de "doble toque" en dispositivos móviles (especialmente iOS).
 // El gráfico ahora es una visualización estática.
 
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCurrent }) {
   const cleanName = (name) =>
@@ -37,7 +37,7 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
               innerRadius={66}
               outerRadius={84}
               paddingAngle={1}
-              isAnimationActive={false} // Desactivar animación para simplicidad
+              isAnimationActive={false}
             >
               {dataInitial.map((entry, index) => (
                 <Cell
@@ -56,7 +56,7 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
               innerRadius={92}
               outerRadius={112}
               paddingAngle={1}
-              isAnimationActive={false} // Desactivar animación para simplicidad
+              isAnimationActive={false}
             >
               {dataMarket.map((entry, index) => (
                 <Cell
@@ -66,9 +66,33 @@ export default function PieChartVisual({ pieDataInitial, pieDataMarket, totalCur
                 />
               ))}
             </Pie>
+            <Tooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const data = payload[0];
+                const value = data.value || 0;
+                const percentage = totalCurrent > 0 ? ((value / totalCurrent) * 100) : 0;
+                
+                return (
+                  <div 
+                    className="bg-white rounded-md shadow-lg px-14 py-2 text-sm text-gray-800 border border-gray-200"
+                    style={{ zIndex: 9999, textAlign: 'center' }}
+                  >
+                    <div>{data.name}</div>
+                    <div>€ {value.toLocaleString('de-DE')}</div>
+                    <div>{percentage.toFixed(1)} %</div>
+                  </div>
+                );
+              }}
+              cursor={false}
+              isAnimationActive={false}
+              wrapperStyle={{ zIndex: 9999 }}
+            />
           </PieChart>
         </ResponsiveContainer>
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        
+        {/* Total en el centro con z-index bajo */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 0 }}>
           <div className="text-center text-sm font-medium text-gray-900">
             € {Number(totalCurrent).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>

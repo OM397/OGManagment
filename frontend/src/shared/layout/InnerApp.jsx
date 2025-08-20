@@ -88,7 +88,7 @@ export default function InnerApp({ user, onLogout }) {
     }
   };
 
-  if (!categoryGroups) {
+  if (!categoryGroups || Object.keys(categoryGroups).length === 0) {
     return <div className="p-6 text-center">Cargando datos del usuario...</div>;
   }
 

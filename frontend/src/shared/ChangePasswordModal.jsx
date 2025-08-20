@@ -26,7 +26,8 @@ export default function ChangePasswordModal({ onClose }) {
         setMessage('✅ Contraseña actualizada correctamente. Cerrando sesión...');
         setTimeout(() => {
           sessionStorage.clear();
-          window.location.href = '/login';
+          // En lugar de redirigir, recargar la página para limpiar el estado
+          window.location.reload();
         }, 2000);
       }
     } catch (err) {

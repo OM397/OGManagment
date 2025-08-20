@@ -2,6 +2,6 @@
 import React from 'react';
 import Login from './Login';
 
-export default function LoginWithRedirect({ onLogin }) {
-  return <Login onLogin={onLogin} />;
+export default function LoginWithRedirect() {
+  return <Login />;
 }

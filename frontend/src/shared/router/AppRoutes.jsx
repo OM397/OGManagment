@@ -7,14 +7,14 @@ import RequireAuth from '../auth/RequireAuth';
 import { CategoryGroupsProvider } from '../context/CategoryGroupsContext';
 import InnerApp from '../layout/InnerApp';
 
-export default function AppRoutes({ user, role, initialData, onLogout, onLogin }) {
+export default function AppRoutes({ user, role, initialData, onLogout }) {
   return (
     <Routes>
       <Route
         path="/"
         element={
           !user ? (
-            <LoginWithRedirect onLogin={onLogin} />
+            <LoginWithRedirect />
           ) : (
             <RequireAuth user={user}>
               <CategoryGroupsProvider key={user} initialData={initialData}>
@@ -28,7 +28,7 @@ export default function AppRoutes({ user, role, initialData, onLogout, onLogin }
         path="/admin"
         element={
           !user ? (
-            <LoginWithRedirect onLogin={onLogin} />
+            <LoginWithRedirect />
           ) : role === 'admin' ? (
             <AdminPanel onLogout={onLogout} />
           ) : (

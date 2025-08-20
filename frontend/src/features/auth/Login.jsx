@@ -2,11 +2,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../shared/services/apiService';
+import { useAuth } from '../../shared/context/AuthContext';
 
-export default function Login({ onLogin }) {
+export default function Login() {
   const [username, setUsername] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -48,12 +50,16 @@ export default function Login({ onLogin }) {
           try {
             const data = await authAPI.googleLogin(credential);
             if (!data?.success) throw new Error('Operación fallida.');
-            localStorage.clear();
-            localStorage.setItem('username', data.email || '');
-            localStorage.setItem('role', data.role || '');
-            onLogin?.({ uid: data.uid, role: data.role });
-            if (data.role === 'admin' && location.pathname.startsWith('/admin')) navigate('/admin', { replace: true });
-            else navigate('/', { replace: true });
+            // Usar el contexto de autenticación con mejor manejo
+            await login({ uid: data.uid, role: data.role, maskedEmail: data.maskedEmail });
+            // Pequeño delay para asegurar que el estado se actualice antes de navegar
+            setTimeout(() => {
+              if (data.role === 'admin' && location.pathname.startsWith('/admin')) {
+                navigate('/admin', { replace: true });
+              } else {
+                navigate('/', { replace: true });
+              }
+            }, 50);
           } catch (e) {
             const msg = e.response?.data?.error || e.message || 'Error con Google';
             setError(msg);
@@ -78,7 +84,7 @@ export default function Login({ onLogin }) {
       }
     };
     init();
-  }, [googleReady, location.pathname, navigate, onLogin]);
+  }, [googleReady, location.pathname, navigate, login]);
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -119,18 +125,17 @@ export default function Login({ onLogin }) {
   console.log('[Login] Enviando credenciales...');
   const data = await authAPI.login(trimmedUsername, trimmedPassword);
         if (!data?.success) throw new Error('Operación fallida.');
-  localStorage.clear();
-  localStorage.setItem('username', trimmedUsername);
-  localStorage.setItem('role', data.role || '');
-  // Actualización optimista inmediata para re-render sin esperar /user
-        onLogin?.({ uid: data.uid, role: data.role });
+  // Usar el contexto de autenticación
+        await login({ uid: data.uid, role: data.role, maskedEmail: data.maskedEmail });
   console.log('[Login] Éxito. uid=', data.uid, 'role=', data.role, 'tokenId=', data.tokenId);
         // Redirección: solo ir a /admin si el usuario estaba en /admin
-        if (data.role === 'admin' && location.pathname.startsWith('/admin')) {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/', { replace: true });
-        }
+        setTimeout(() => {
+          if (data.role === 'admin' && location.pathname.startsWith('/admin')) {
+            navigate('/admin', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
+        }, 50);
       }
 
     } catch (err) {

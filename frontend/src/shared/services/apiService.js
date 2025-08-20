@@ -19,112 +19,92 @@ const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Nota: ya no persistimos accessToken en sessionStorage para reducir superficie de ataque.
-// Si necesitas pruebas locales con Authorization, ajusta manualmente aquí de forma temporal.
+// Eliminado: iOS fallback con localStorage - ahora confiamos solo en cookies HttpOnly
+// try {
+//   const stored = localStorage.getItem('accessToken');
+//   if (stored && IS_IOS) {
+//     apiClient.defaults.headers.common['Authorization'] = `Bearer ${stored}`;
+//   }
+// } catch (_) {}
 
-// iOS fallback: si los cookies se bloquean en iOS Safari tras un reload, usa Authorization
-// con un accessToken efímero guardado en sessionStorage. Esto NO almacena refresh token.
-try {
-  const stored = localStorage.getItem('accessToken');
-  if (stored && IS_IOS) {
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${stored}`;
-  }
-} catch (_) {}
-
-// 🔄 Estado de renovación para evitar múltiples intentos simultáneos
+// 🔄 Estado simplificado para renovación de tokens
+let refreshPromise = null;
 let isRefreshing = false;
-let failedQueue = [];
-let iosMissingTried = false; // evita bucles por MISSING_TOKEN en iOS
-// Gracia post-login: evitar redirect duro por fallos de refresh inmediatamente después de iniciar sesión
-let lastAuthBootstrapAt = 0;
 
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  
-  failedQueue = [];
+// Función para limpiar el estado de refresh
+const clearRefreshState = () => {
+  refreshPromise = null;
+  isRefreshing = false;
 };
 
-// 📤 Interceptor de respuesta para manejo automático de tokens
+// Función para manejar errores de autenticación
+const handleAuthError = (error) => {
+  console.warn('[API] Error de autenticación:', error?.response?.data?.error || error.message);
+  
+  // Limpiar headers de autorización
+  delete apiClient.defaults.headers.common['Authorization'];
+  
+  // En lugar de redirigir, dejar que React Router maneje el estado no autenticado
+  // El AuthContext detectará la falta de token y redirigirá apropiadamente
+};
+
+// 📤 Interceptor de respuesta simplificado
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
     // No interceptar errores de endpoints de autenticación
-    const url = (originalRequest && (originalRequest.url || '')) || '';
-    const isAuthRequest = /\/login$|\/refresh$|\/logout$/.test(url);
+    const url = (originalRequest?.url || '');
+    const isAuthRequest = /\/login$|\/refresh$|\/logout$|\/register$|\/forgot-password$/.test(url);
 
-    // Si es error 401 y el request no es de auth, intentar renovar token
+    // Solo manejar errores 401 que no sean de auth y no hayan sido reintentados
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       const errorData = error.response.data || {};
       const code = errorData?.code;
-      const allowIOSMissing = IS_IOS && code === 'MISSING_TOKEN' && !iosMissingTried;
-      const shouldRefresh = !!(errorData?.requiresRefresh || ['TOKEN_EXPIRED','SESSION_NOT_FOUND'].includes(code) || allowIOSMissing);
+      
+      // Determinar si debemos intentar refresh
+      const shouldRefresh = errorData?.requiresRefresh || 
+                           ['TOKEN_EXPIRED', 'SESSION_NOT_FOUND'].includes(code) ||
+                           (IS_IOS && code === 'MISSING_TOKEN');
       
       if (shouldRefresh) {
-        // Marcar que ya intentamos una vez el caso iOS MISSING_TOKEN
-        if (allowIOSMissing) iosMissingTried = true;
-        
-        if (isRefreshing) {
-          // Si ya estamos renovando, agregar a la cola
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          }).then(() => {
-            return apiClient(originalRequest);
-          }).catch(err => {
-            return Promise.reject(err);
-          });
-        }
-
+        // Marcar que ya intentamos este request
         originalRequest._retry = true;
-        isRefreshing = true;
-
-        try {
-          // Intentar renovar el token
-          await apiClient.post('/refresh');
-          
-          // Si la renovación fue exitosa, procesar la cola
-          processQueue(null);
-          isRefreshing = false;
-          
-          // Reintentar la petición original
+        
+        // Si ya estamos refrescando, esperar a que termine
+        if (isRefreshing && refreshPromise) {
+          try {
+            await refreshPromise;
+            // Reintentar el request original
           return apiClient(originalRequest);
-          
         } catch (refreshError) {
-          // Si la renovación falla, limpiar sesión
-          processQueue(refreshError);
-          isRefreshing = false;
-
-          // Caso iOS/MISSING_TOKEN: evitar recargar en bucle. Limpiar y salir sin redirect duro.
-          if (allowIOSMissing) {
-            try { localStorage.removeItem('accessToken'); } catch(_) {}
-            delete apiClient.defaults.headers.common['Authorization'];
+            handleAuthError(refreshError);
             return Promise.reject(refreshError);
           }
-
-          // Gracia post-login: si acaba de iniciar sesión (últimos 5s), no forzar redirect duro.
-          try {
-            const withinGrace = Date.now() - lastAuthBootstrapAt < 5000;
-            if (withinGrace) {
-              return Promise.reject(refreshError);
-            }
-          } catch (_) {}
-
-          // Otros casos: redirigir a login de forma controlada
-          try { localStorage.clear(); } catch(_) {}
-          delete apiClient.defaults.headers.common['Authorization'];
-          window.location.href = '/';
-          return Promise.reject(refreshError);
         }
-  }
+        
+        // Iniciar proceso de refresh
+        isRefreshing = true;
+        refreshPromise = apiClient.post('/refresh')
+          .then(() => {
+            // Refresh exitoso, limpiar estado
+            clearRefreshState();
+            // Reintentar el request original
+            return apiClient(originalRequest);
+          })
+          .catch((refreshError) => {
+            // Refresh falló, limpiar estado y manejar error
+            clearRefreshState();
+            handleAuthError(refreshError);
+              return Promise.reject(refreshError);
+          });
+        
+        return refreshPromise;
+      }
     }
-
+    
+    // Para otros errores, simplemente rechazar
     return Promise.reject(error);
   }
 );
@@ -143,8 +123,8 @@ export const authAPI = {
   // iOS-only fallback persist across reloads (no refresh token stored)
   try { if (IS_IOS) sessionStorage.setItem('accessToken', data.accessToken); } catch (_) {}
     }
-  // Marcar bootstrap de autenticación para tolerar fallos transitorios de refresh
-  try { lastAuthBootstrapAt = Date.now(); } catch(_) {}
+  // Eliminado: Marcar bootstrap de autenticación para tolerar fallos transitorios de refresh
+  // try { lastAuthBootstrapAt = Date.now(); } catch(_) {}
     return data;
   },
 
@@ -160,8 +140,8 @@ export const authAPI = {
     } else {
       delete apiClient.defaults.headers.common['Authorization'];
     }
-  // Marcar bootstrap de autenticación para tolerar fallos transitorios de refresh
-  try { lastAuthBootstrapAt = Date.now(); } catch(_) {}
+  // Eliminado: Marcar bootstrap de autenticación para tolerar fallos transitorios de refresh
+  // try { lastAuthBootstrapAt = Date.now(); } catch(_) {}
     return data;
   },
 
@@ -197,7 +177,8 @@ export const authAPI = {
     
     // Limpiar storage independientemente del resultado
   // Limpieza agresiva de cualquier rastro previo (aunque ya no guardamos tokens/username)
-  try { sessionStorage.clear(); localStorage.clear(); } catch (_) {}
+  try { sessionStorage.clear(); } catch (_) {}
+  // Eliminado: localStorage.clear();
   delete apiClient.defaults.headers.common['Authorization'];
   },
 
@@ -211,7 +192,8 @@ export const authAPI = {
   // ...existing code...
     }
     
-  try { sessionStorage.clear(); localStorage.clear(); } catch (_) {}
+  try { sessionStorage.clear(); } catch (_) {}
+  // Eliminado: localStorage.clear();
   delete apiClient.defaults.headers.common['Authorization'];
   },
 

@@ -213,7 +213,6 @@ export default function AdminPanel() {
 
   const handleLogout = async () => {
     try { await authAPI.logout(); } catch (_) {}
-    localStorage.clear();
     sessionStorage.clear();
     navigate('/');
   };

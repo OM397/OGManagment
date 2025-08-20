@@ -214,7 +214,15 @@ router.post('/login',
   // ...existing code...
     }
 
-    const responseBody = { success: true, uid: user.publicId, role: user.role, tokenId, lastLogin: user.lastLogin };
+    // Función para enmascarar email (consistente con /user endpoint)
+    const maskEmail = (email) => {
+      if (!email || !email.includes('@')) return email || '';
+      const [local, domain] = email.split('@');
+      const visible = local[0];
+      return `${visible}${'*'.repeat(Math.max(1, Math.min(4, local.length - 1)))}` + '@' + domain;
+    };
+
+    const responseBody = { success: true, uid: user.publicId, role: user.role, tokenId, lastLogin: user.lastLogin, maskedEmail: maskEmail(user.username) };
     if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production' || EXPOSE_ACCESS_TOKEN) {
       responseBody.accessToken = accessToken;
     }
@@ -292,7 +300,15 @@ router.post('/google-login', authLimiter, async (req, res) => {
       await TokenService.storeSession(user.publicId, tokenId, { userAgent: req.headers['user-agent'], ip: req.ip || req.connection.remoteAddress });
     } catch {}
 
-    const responseBody = { success: true, uid: user.publicId, role: user.role, tokenId, email };
+    // Función para enmascarar email (consistente con /user endpoint)
+    const maskEmail = (email) => {
+      if (!email || !email.includes('@')) return email || '';
+      const [local, domain] = email.split('@');
+      const visible = local[0];
+      return `${visible}${'*'.repeat(Math.max(1, Math.min(4, local.length - 1)))}` + '@' + domain;
+    };
+
+    const responseBody = { success: true, uid: user.publicId, role: user.role, tokenId, maskedEmail: maskEmail(user.username) };
     if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production' || EXPOSE_ACCESS_TOKEN) {
       responseBody.accessToken = accessToken;
     }

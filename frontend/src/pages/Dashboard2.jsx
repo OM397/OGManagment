@@ -199,7 +199,7 @@ export default function Dashboard2({ categoryGroups: categoryGroupsProp, marketD
           </div>
           {/* Card: Distribución por Grupos */}
           <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full">
-            <h4 className="text-base font-semibold text-gray-700 mb-2">Distribución por Grupos</h4>
+            <h4 className="text-base font-semibold text-gray-700 mb-2">Distribución por Asset</h4>
             <div className="flex-grow flex justify-center items-center min-h-[200px]">
               <PieChartConnector
                 onAssetSelect={id => {

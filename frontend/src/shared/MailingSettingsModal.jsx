@@ -26,10 +26,8 @@ export default function MailingSettingsModal({ onClose }) {
         let msg = 'Error al cargar la configuración de mailing';
         
         if (err.response?.status === 401) {
-          msg = 'Sesión expirada. Redirigiendo al login...';
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 2000);
+          msg = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+          // En lugar de redirigir, mostrar mensaje y dejar que el usuario maneje la sesión
         } else if (err.response?.data?.error) {
           msg = err.response.data.error;
         }
@@ -68,10 +66,7 @@ export default function MailingSettingsModal({ onClose }) {
       
       if (err.response?.status === 401) {
         msg = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
-        // Redirect to login after showing message
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 2000);
+        // En lugar de redirigir, mostrar mensaje y dejar que el usuario maneje la sesión
       } else if (err.response?.data?.error) {
         msg = err.response.data.error;
       }

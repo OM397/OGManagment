@@ -21,22 +21,13 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [username, setUsername] = useState(user || '');
   const [emailPreference, setEmailPreference] = useState(null);
 
-  useEffect(() => {
-    if (!username) {
-      // Use axios client with interceptors; don't force logout on first 401
-      apiClient.get('/user')
-        .then((res) => {
-          const data = res?.data;
-          if (data?.maskedEmail) setUsername(data.maskedEmail);
-          else if (data?.uid) setUsername(data.uid);
-        })
-        .catch(() => { /* ignore: allow global auth flow to handle */ });
-    }
+  // Usar directamente el user que viene como prop
+  const username = user || '';
 
-    // Cargar preferencia de email
+  useEffect(() => {
+    // Cargar preferencia de email solo si tenemos username
     if (username) {
       loadEmailPreference();
     }
