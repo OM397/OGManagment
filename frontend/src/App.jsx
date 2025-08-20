@@ -11,11 +11,11 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="p-6 text-center">
-        <LoadingSpinner size="lg" className="mx-auto mb-4" />
-        <p>Verificando sesión...</p>
-      </div>
-    );
+    <div className="p-6 text-center">
+      <LoadingSpinner size="lg" className="mx-auto mb-4" />
+      <p>Verificando sesión...</p>
+    </div>
+  );
   }
 
   return (

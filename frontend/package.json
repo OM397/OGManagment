@@ -7,8 +7,7 @@
     "serve": "serve -s dist",
     "preview": "vite preview",
     "clean": "rimraf dist .vite node_modules && npm install",
-    "lint": "eslint .",
-    "generate-images": "node scripts/generate-og-image.js"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.6",
