@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCw, UserCircle, ChevronDown, Menu, Mail, Key } from 'lucide-react';
 import { API_BASE } from './config';
+import apiClient from './services/apiService';
 import ChangePasswordModal from './ChangePasswordModal';
 import EmailPreferencesModal from './EmailPreferencesModal';
 
@@ -25,23 +26,14 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
 
   useEffect(() => {
     if (!username) {
-      fetch(`${API_BASE}/user`, { credentials: 'include' })
+      // Use axios client with interceptors; don't force logout on first 401
+      apiClient.get('/user')
         .then((res) => {
-          if (res.status === 401) {
-            if (typeof onLogout === 'function') onLogout();
-            window.location.href = '/login';
-            return null;
-          }
-          return res.ok ? res.json() : null;
+          const data = res?.data;
+          if (data?.maskedEmail) setUsername(data.maskedEmail);
+          else if (data?.uid) setUsername(data.uid);
         })
-        .then((data) => {
-          if (data?.maskedEmail) {
-            setUsername(data.maskedEmail);
-          } else if (data?.uid) {
-            setUsername(data.uid);
-          }
-        })
-        .catch(() => {});
+        .catch(() => { /* ignore: allow global auth flow to handle */ });
     }
 
     // Cargar preferencia de email
@@ -57,23 +49,16 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
   };
 
   const loadEmailPreference = () => {
-    if (username) {
-      fetch(`${API_BASE}/email-preference`, { credentials: 'include' })
-        .then((res) => {
-          if (res.status === 401) {
-            if (typeof onLogout === 'function') onLogout();
-            window.location.href = '/login';
-            return null;
-          }
-          return res.ok ? res.json() : null;
-        })
-        .then((data) => {
-          if (data && typeof data.receiveWeeklyEmail === 'boolean') {
-            setEmailPreference(data.receiveWeeklyEmail);
-          }
-        })
-        .catch(() => {});
-    }
+    if (!username) return;
+    // Use axios client with interceptors; tolerate transient 401
+    apiClient.get('/email-preference')
+      .then((res) => {
+        const data = res?.data;
+        if (data && typeof data.receiveWeeklyEmail === 'boolean') {
+          setEmailPreference(data.receiveWeeklyEmail);
+        }
+      })
+      .catch(() => { /* ignore */ });
   };
 
   const handleDropdownOpen = () => {

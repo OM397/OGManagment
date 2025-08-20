@@ -35,6 +35,8 @@ try {
 let isRefreshing = false;
 let failedQueue = [];
 let iosMissingTried = false; // evita bucles por MISSING_TOKEN en iOS
+// Gracia post-login: evitar redirect duro por fallos de refresh inmediatamente después de iniciar sesión
+let lastAuthBootstrapAt = 0;
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach(prom => {
@@ -106,6 +108,14 @@ apiClient.interceptors.response.use(
             return Promise.reject(refreshError);
           }
 
+          // Gracia post-login: si acaba de iniciar sesión (últimos 5s), no forzar redirect duro.
+          try {
+            const withinGrace = Date.now() - lastAuthBootstrapAt < 5000;
+            if (withinGrace) {
+              return Promise.reject(refreshError);
+            }
+          } catch (_) {}
+
           // Otros casos: redirigir a login de forma controlada
           try { localStorage.clear(); } catch(_) {}
           delete apiClient.defaults.headers.common['Authorization'];
@@ -133,6 +143,8 @@ export const authAPI = {
   // iOS-only fallback persist across reloads (no refresh token stored)
   try { if (IS_IOS) sessionStorage.setItem('accessToken', data.accessToken); } catch (_) {}
     }
+  // Marcar bootstrap de autenticación para tolerar fallos transitorios de refresh
+  try { lastAuthBootstrapAt = Date.now(); } catch(_) {}
     return data;
   },
 
@@ -148,6 +160,8 @@ export const authAPI = {
     } else {
       delete apiClient.defaults.headers.common['Authorization'];
     }
+  // Marcar bootstrap de autenticación para tolerar fallos transitorios de refresh
+  try { lastAuthBootstrapAt = Date.now(); } catch(_) {}
     return data;
   },
 

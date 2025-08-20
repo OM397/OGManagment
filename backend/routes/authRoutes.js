@@ -180,8 +180,14 @@ router.post('/login',
   const { username, password } = req.body;
 
   try {
-  const user = await User.findOne({ username });
+  // Normalizar email a minúsculas (el esquema lo guarda en minúsculas)
+  const lookup = String(username || '').toLowerCase();
+  const user = await User.findOne({ username: lookup });
   if (!user) return res.status(401).json({ error: 'Credenciales inválidas.' });
+  // Backfill publicId for legacy accounts missing it
+  if (!user.publicId) {
+    try { user.publicId = crypto.randomUUID(); await user.save(); } catch (_) {}
+  }
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return res.status(401).json({ error: 'Credenciales inválidas.' });
     
@@ -269,6 +275,11 @@ router.post('/google-login', authLimiter, async (req, res) => {
       } catch (e) {
         // En dev podemos fallar silenciosamente; el usuario podrá usar "Olvidé mi contraseña".
       }
+    }
+
+    // Backfill publicId for legacy Google-created users missing it
+    if (!user.publicId) {
+      try { user.publicId = crypto.randomUUID(); await user.save(); } catch (_) {}
     }
 
     if (user.blocked) return res.status(403).json({ error: 'Usuario bloqueado.' });
