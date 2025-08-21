@@ -31,7 +31,7 @@ async function buildCoinGeckoMap(){
       }, {});
     } else {
       // Fallback: fetch minimal list for top coins only to avoid large payload on cold start
-      console.log('🌐 Fetching minimal CoinGecko list (cold fallback)...');
+  //    console.log('🌐 Fetching minimal CoinGecko list (cold fallback)...');
       const { data } = await axios.get('https://api.coingecko.com/api/v3/coins/list', { timeout: 20000 });
       CG_SYMBOL_TO_ID = data.slice(0, 5000).reduce((acc, c) => {
         const sym = c.symbol?.toLowerCase?.();
@@ -42,9 +42,9 @@ async function buildCoinGeckoMap(){
     }
     const CANONICAL = { btc: 'bitcoin', eth: 'ethereum', xrp: 'ripple', sol: 'solana', ada: 'cardano', doge: 'dogecoin', trump: 'official-trump' };
     for (const [sym, id] of Object.entries(CANONICAL)) CG_SYMBOL_TO_ID[sym] = id;
-    console.log('🗺️  CoinGecko symbol map ready entries:', Object.keys(CG_SYMBOL_TO_ID).length);
+  //  console.log('🗺️  CoinGecko symbol map ready entries:', Object.keys(CG_SYMBOL_TO_ID).length);
   } catch (e) {
-    console.warn('⚠️ CoinGecko map build failed:', e.message);
+  //  console.warn('⚠️ CoinGecko map build failed:', e.message);
     CG_SYMBOL_TO_ID = {};
   }
   return CG_SYMBOL_TO_ID;
@@ -60,7 +60,7 @@ const FRESH_CACHE_THRESHOLD = 300; // Consider cache "fresh" for 5 minutes
 
 // EXCHANGE RATES
 async function getFXRates(currencies = []) {
-  console.log('🌍 Getting FX Rates for:', currencies);
+  // console.log('🌍 Getting FX Rates for:', currencies);
   const requested = Array.from(new Set((currencies || []).map(c => String(c).toUpperCase()).filter(c => c && c !== 'EUR')));
   let cached = null;
   try { const raw = await redis.get(FX_CACHE_KEY); if (raw) cached = JSON.parse(raw); } catch (_) {}
@@ -68,7 +68,7 @@ async function getFXRates(currencies = []) {
   const have = new Set(Object.keys(cached));
   const missing = requested.filter(c => !have.has(c));
   if (!missing.length) {
-    if (requested.length) console.log('📦 FX fully from cache');
+    if (requested.length) //console.log('📦 FX fully from cache');
     return cached;
   }
   try {
@@ -113,7 +113,7 @@ async function getFXRatesWithSource(currencies = []) {
 
 // OPTIMIZED PRICE FETCHING WITH RATE LIMITING
 async function fetchPrice(id, type) {
-  console.log('💸 Fetching price for:', id, '| Type:', type);
+ // console.log('💸 Fetching price for:', id, '| Type:', type);
   const cacheKey = `price:${type}:${id.toLowerCase()}`;
   let quote, currency = null;
 
@@ -124,12 +124,12 @@ async function fetchPrice(id, type) {
       const parsedCache = JSON.parse(cached);
       // Use cached data if less than FRESH_CACHE_THRESHOLD seconds old
       if (parsedCache?.fetchedAt && Date.now() - new Date(parsedCache.fetchedAt).getTime() < FRESH_CACHE_THRESHOLD * 1000) {
-        console.log('📦 Using fresh cache for:', id);
+       // console.log('📦 Using fresh cache for:', id);
         return parsedCache;
       }
     }
   } catch (e) {
-    console.warn('⚠️ Cache read error:', e.message);
+  //  console.warn('⚠️ Cache read error:', e.message);
   }
 
   // 1 Try Yahoo Finance with rate limiting
@@ -143,10 +143,10 @@ async function fetchPrice(id, type) {
       if (res?.regularMarketPrice) {
         quote = { price: res.regularMarketPrice, currency: res.currency?.toUpperCase() || null, provider: 'yahoo' };
         if (res.marketCap) quote.marketCap = res.marketCap;
-        console.log('✅ Yahoo Finance quote:', quote);
+       // console.log('✅ Yahoo Finance quote:', quote);
       }
     } catch (e) {
-      console.warn('❌ Yahoo failed:', e.message);
+    //  console.warn('❌ Yahoo failed:', e.message);
     }
   }
 
@@ -158,9 +158,9 @@ async function fetchPrice(id, type) {
         return await finnhubService.getQuote(symbol);
       });
       if (quote) quote.provider = 'finnhub';
-      console.log('✅ Finnhub quote:', quote);
+  //    console.log('✅ Finnhub quote:', quote);
     } catch (e) {
-      console.warn('❌ Finnhub failed:', e.message);
+    //  console.warn('❌ Finnhub failed:', e.message);
     }
   }
 
@@ -172,9 +172,9 @@ async function fetchPrice(id, type) {
         return await twelveData.fetchQuote(symbol);
       });
       if (quote) quote.provider = 'twelvedata';
-      console.log('✅ TwelveData quote:', quote);
+  //    console.log('✅ TwelveData quote:', quote);
     } catch (e) {
-      console.warn('❌ TwelveData failed:', e.message);
+    //  console.warn('❌ TwelveData failed:', e.message);
     }
   }
 
@@ -200,14 +200,14 @@ async function fetchPrice(id, type) {
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
-        console.log('📦 Price from stale cache (fallback) for', id);
+       // console.log('📦 Price from stale cache (fallback) for', id);
         return JSON.parse(cached);
       }
     } catch (err) {
-      console.warn('⚠️ Redis cache fallback failed:', err.message);
+    //  console.warn('⚠️ Redis cache fallback failed:', err.message);
     }
 
-    console.error('🚫 No quote found for:', id);
+  //  console.error('🚫 No quote found for:', id);
     return null;
   }
 
@@ -238,7 +238,7 @@ async function fetchHistory(id, type, days = 30) {
   // Clamp days to sane bounds (allow 1 day minimum for 1d change calculations)
   const originalDays = days;
   days = Math.min(Math.max(parseInt(days, 10) || 30, 1), 365);
-  console.log('📉 Fetching history for:', id, '| Type:', type, '| Days:', days, '(requested:', originalDays, ')');
+ // console.log('📉 Fetching history for:', id, '| Type:', type, '| Days:', days, '(requested:', originalDays, ')');
   const cacheKey = `history:${type}:${id}:${days}`;
 
   // Check cache first (with extended TTL)
@@ -248,12 +248,12 @@ async function fetchHistory(id, type, days = 30) {
       const parsedCache = JSON.parse(cached);
       // Use cached data if less than 6 hours old for history
       if (parsedCache?.fetchedAt && Date.now() - new Date(parsedCache.fetchedAt).getTime() < 21600000) {
-        console.log('📦 Using cached history for:', id);
+       // console.log('📦 Using cached history for:', id);
         return parsedCache;
       }
     }
   } catch (e) {
-    console.warn('⚠️ History cache read error:', e.message);
+   // console.warn('⚠️ History cache read error:', e.message);
   }
 
   const fullDateRange = Array.from({ length: days }, (_, i) => {
@@ -292,25 +292,28 @@ async function fetchHistory(id, type, days = 30) {
         return await twelveData.fetchTimeSeries(symbol, { interval: '1day', outputsize: days });
       });
       if (td?.quotes?.length) {
+        console.log('TwelveData raw data sample:', td.meta); // Debug log
+        console.log('TwelveData currency field:', td.meta?.currency); // Debug log
         currency = td.meta?.currency || 'EUR';
+        console.log('TwelveData final currency:', currency); // Debug log
         history = td.quotes.map(p => ({
           date: new Date(p.date).toISOString().split('T')[0],
           price: +Number(p.close).toFixed(2)
         }));
-        console.log('✅ TwelveData history:', history.length, 'items');
+   //     console.log('✅ TwelveData history:', history.length, 'items');
         providerName = 'twelvedata';
       }
     } catch (e) {
-      console.warn('❌ TwelveData history failed:', e.message);
+    //  console.warn('❌ TwelveData history failed:', e.message);
     }
   } else {
-    console.log('⏭️ Skipping TwelveData for long range', days, 'preferring Yahoo');
+   // console.log('⏭️ Skipping TwelveData for long range', days, 'preferring Yahoo');
   }
 
   // 2 Yahoo fallback with rate limiting
   if (!history.length || (days > 60 && history.length < days * 0.5)) {
     if (history.length && days > 60) {
-      console.log(`ℹ️ Discarding short TwelveData series (${history.length}) for long range ${days}, trying Yahoo`);
+   //   console.log(`ℹ️ Discarding short TwelveData series (${history.length}) for long range ${days}, trying Yahoo`);
       history = [];
     }
     if (providerManager.isProviderAvailable('yahoo')) {
@@ -326,11 +329,61 @@ async function fetchHistory(id, type, days = 30) {
           date: p.date.toISOString().split('T')[0],
           price: +p.close.toFixed(2)
         }));
-        currency = yf[0]?.currency || 'EUR';
+        console.log('Yahoo Finance raw data sample:', yf[0]); // Debug log
+        console.log('Yahoo Finance currency field:', yf[0]?.currency); // Debug log
+        
+        // Si Yahoo Finance no proporciona currency, intentar detectarla basándose en el símbolo
+        if (!yf[0]?.currency) {
+          const symbol = getIdForApi(id, type, 'yahoo') || id;
+          
+          if (type === 'stock') {
+            if (!symbol.includes('-') && !symbol.includes('.')) {
+              // Stock estadounidense sin sufijo (NYSE, NASDAQ)
+              currency = 'USD';
+              console.log('Yahoo Finance: Detected USD for US stock symbol:', symbol);
+            } else if (symbol.includes('.AS') || symbol.includes('.DE') || symbol.includes('.CO') || 
+                       symbol.includes('.VI') || symbol.includes('.MI') || symbol.includes('.PA')) {
+              // Stock europeo con sufijo de bolsa (Amsterdam, Deutsche, Copenhagen, Vienna, Milan, Paris)
+              currency = 'EUR';
+              console.log('Yahoo Finance: Detected EUR for European stock symbol:', symbol);
+            } else if (symbol.includes('.L') || symbol.includes('.SW')) {
+              // Stock británico o suizo
+              currency = symbol.includes('.L') ? 'GBP' : 'CHF';
+              console.log('Yahoo Finance: Detected', currency, 'for stock symbol:', symbol);
+            } else {
+              // Fallback para otros stocks
+              currency = 'USD';
+              console.log('Yahoo Finance: Using USD fallback for stock symbol:', symbol);
+            }
+          } else if (type === 'crypto') {
+            if (symbol.includes('-EUR')) {
+              currency = 'EUR';
+              console.log('Yahoo Finance: Detected EUR for crypto symbol:', symbol);
+            } else if (symbol.includes('-USD')) {
+              currency = 'USD';
+              console.log('Yahoo Finance: Detected USD for crypto symbol:', symbol);
+            } else if (symbol.includes('-GBP')) {
+              currency = 'GBP';
+              console.log('Yahoo Finance: Detected GBP for crypto symbol:', symbol);
+            } else {
+              // Fallback para cryptos sin sufijo de moneda
+              currency = 'EUR';
+              console.log('Yahoo Finance: Using EUR fallback for crypto symbol:', symbol);
+            }
+          } else {
+            // Fallback general para otros tipos
+            currency = 'EUR';
+            console.log('Yahoo Finance: Using EUR fallback for symbol:', symbol);
+          }
+        } else {
+          currency = yf[0].currency;
+        }
+        
+        console.log('Yahoo Finance final currency:', currency); // Debug log
     providerName = 'yahoo';
-        console.log('✅ Yahoo Finance history:', history.length, 'items');
+   //     console.log('✅ Yahoo Finance history:', history.length, 'items');
       } catch (e) {
-        console.warn('❌ Yahoo history failed:', e.message);
+    //    console.warn('❌ Yahoo history failed:', e.message);
         // Additional crypto Yahoo suffix fallback
         if (type === 'crypto' && providerManager.isProviderAvailable('yahoo')) {
           try {
@@ -345,11 +398,33 @@ async function fetchHistory(id, type, days = 30) {
               date: p.date.toISOString().split('T')[0],
               price: +p.close.toFixed(2)
             }));
-            currency = yf2[0]?.currency || 'EUR';
-      providerName = 'yahoo';
-            console.log('✅ Yahoo (crypto suffix) history:', history.length, 'items');
+            
+            // Si Yahoo Finance no proporciona currency, intentar detectarla basándose en el símbolo
+            if (!yf2[0]?.currency) {
+              const symbol = `${id.toUpperCase()}-EUR`;
+              
+              if (symbol.includes('-EUR')) {
+                currency = 'EUR';
+                console.log('Yahoo Finance (crypto): Detected EUR for crypto symbol:', symbol);
+              } else if (symbol.includes('-USD')) {
+                currency = 'USD';
+                console.log('Yahoo Finance (crypto): Detected USD for crypto symbol:', symbol);
+              } else if (symbol.includes('-GBP')) {
+                currency = 'GBP';
+                console.log('Yahoo Finance (crypto): Detected GBP for crypto symbol:', symbol);
+              } else {
+                // Fallback para cryptos sin sufijo de moneda
+                currency = 'EUR';
+                console.log('Yahoo Finance (crypto): Using EUR fallback for crypto symbol:', symbol);
+              }
+            } else {
+              currency = yf2[0].currency;
+            }
+            
+            providerName = 'yahoo';
+        //    console.log('✅ Yahoo (crypto suffix) history:', history.length, 'items');
           } catch (e2) {
-            console.warn('❌ Yahoo crypto suffix history failed:', e2.message);
+         //   console.warn('❌ Yahoo crypto suffix history failed:', e2.message);
           }
         }
       }
@@ -365,9 +440,9 @@ async function fetchHistory(id, type, days = 30) {
       });
       currency = 'USD';
   providerName = 'finnhub';
-      console.log('✅ Finnhub history:', history.length, 'items');
+    //  console.log('✅ Finnhub history:', history.length, 'items');
     } catch (e) {
-      console.warn('❌ Finnhub history failed:', e.message);
+    //  console.warn('❌ Finnhub history failed:', e.message);
     }
   }
 
@@ -376,14 +451,14 @@ async function fetchHistory(id, type, days = 30) {
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
-        console.log('📦 History from stale cache (fallback) for', id);
+       // console.log('📦 History from stale cache (fallback) for', id);
         return JSON.parse(cached);
       }
     } catch (err) {
-      console.warn('⚠️ Redis history fallback failed:', err.message);
+     // console.warn('⚠️ Redis history fallback failed:', err.message);
     }
 
-    console.error('🚫 No historical data found for:', id);
+  //  console.error('🚫 No historical data found for:', id);
     return null;
   }
 
@@ -402,7 +477,7 @@ async function fetchHistory(id, type, days = 30) {
 // OPTIMIZED CURRENT QUOTES WITH BATCHED COINGECKO
 async function getCurrentQuotes(tickers) {
   const map = await buildCoinGeckoMap();
-  console.log('📥 Market data request received:', tickers);
+ // console.log('📥 Market data request received:', tickers);
   const result = { cryptos: {}, stocks: {}, _meta: [] };
   const currencies = new Set();
   const cryptoContexts = [];
@@ -504,7 +579,7 @@ async function getCurrentQuotes(tickers) {
       ])];
 
       try {
-        console.log(`🔄 Batched CoinGecko request for ${allIds.length} unique IDs`);
+   //     console.log(`🔄 Batched CoinGecko request for ${allIds.length} unique IDs`);
         const batchData = await providerManager.batchCoinGeckoRequest(allIds);
         
         // Attach results to contexts
@@ -525,7 +600,7 @@ async function getCurrentQuotes(tickers) {
           }
         }
       } catch (error) {
-        console.warn('❌ Batched CoinGecko failed:', error.message);
+     //   console.warn('❌ Batched CoinGecko failed:', error.message);
       }
     }
 
@@ -715,18 +790,18 @@ async function getCurrentQuotes(tickers) {
 
 // PERFORMANCE METRICS
 async function fetchPerformanceMetrics(id, type, options = {}) {
-  console.log('📊 Fetching performance metrics for:', id, '| Type:', type);
+//  console.log('📊 Fetching performance metrics for:', id, '| Type:', type);
   const cacheKey = `perf:${type}:${id}`;
   
   if (!options.nocache) {
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
-        console.log('📦 Using cached performance for:', id);
+  //      console.log('📦 Using cached performance for:', id);
         return JSON.parse(cached);
       }
     } catch (e) {
-      console.warn('⚠️ Performance cache read error:', e.message);
+    //  console.warn('⚠️ Performance cache read error:', e.message);
     }
   }
 

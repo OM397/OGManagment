@@ -16,7 +16,7 @@ const cacheWrite = async (key, data) => {
     };
     // 5 minute TTL for TwelveData responses
     await redisClient.set(cacheKey, JSON.stringify(cacheData), 'EX', 300);
-    console.log(`✅ TwelveData cached: ${key}`);
+  //  console.log(`✅ TwelveData cached: ${key}`);
   } catch (error) {
     console.warn('⚠️ TwelveData cache write failed:', error.message);
   }

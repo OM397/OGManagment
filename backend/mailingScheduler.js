@@ -22,7 +22,7 @@ function getCronExpression(weekday, hour, minute = 0) {
 
 async function scheduleMailingJob() {
   if (process.env.RUN_SCHEDULER && ['false','0','no'].includes(process.env.RUN_SCHEDULER.toLowerCase())) {
-    console.log('⏭️  RUN_SCHEDULER set to false. Skipping scheduling.');
+ //   console.log('⏭️  RUN_SCHEDULER set to false. Skipping scheduling.');
     return;
   }
   // Parar tareas previas
@@ -30,7 +30,7 @@ async function scheduleMailingJob() {
   currentTasks = [];
   const config = await MailingConfig.findOne();
   if (!config || !config.schedule) {
-    console.warn('No hay configuración de mailing. No se programan jobs.');
+ //   console.warn('No hay configuración de mailing. No se programan jobs.');
     return;
   }
   // Migración en caliente
@@ -59,7 +59,7 @@ async function scheduleMailingJob() {
     const cronPre2 = getCronExpression(preDay, preHour, 58); // (hour-1):58 → 2 minutos antes
     const cronSend = getCronExpression(day, hour, 0);        // hh:00 → envío
 
-  console.log(`⏰ Programando prewarm T-5: ${cronPre5} (0=Domingo)`);
+ // console.log(`⏰ Programando prewarm T-5: ${cronPre5} (0=Domingo)`);
     try {
       const t1 = cron.schedule(cronPre5, async () => {
         console.log('🔥 Prewarm (T-5): Market Summary + User Assets...');
@@ -71,7 +71,7 @@ async function scheduleMailingJob() {
       console.error('Error programando cron', cronPre5, err.message);
     }
 
-  console.log(`⏰ Programando prewarm T-2: ${cronPre2} (0=Domingo)`);
+//  console.log(`⏰ Programando prewarm T-2: ${cronPre2} (0=Domingo)`);
     try {
       const t2 = cron.schedule(cronPre2, async () => {
         console.log('🔥 Prewarm (T-2): Market Summary + User Assets...');
@@ -83,10 +83,10 @@ async function scheduleMailingJob() {
       console.error('Error programando cron', cronPre2, err.message);
     }
 
-    console.log(`⏰ Programando mailing semanal (envío): ${cronSend} (0=Domingo)`);
+   // console.log(`⏰ Programando mailing semanal (envío): ${cronSend} (0=Domingo)`);
     try {
       const t3 = cron.schedule(cronSend, async () => {
-        console.log('📧 Ejecutando mailing semanal automático...');
+   //     console.log('📧 Ejecutando mailing semanal automático...');
         // Última milla
         try { await prewarmSummary(); } catch (_) {}
         try { await prewarmUserAssets(); } catch (_) {}

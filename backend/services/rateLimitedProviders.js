@@ -150,7 +150,7 @@ class ProviderManager extends EventEmitter {
     // Collect all unique crypto IDs
     const allIds = [...new Set(batch.flatMap(b => b.cryptoIds))];
     
-    console.log(`🔄 Processing CoinGecko batch: ${allIds.length} unique cryptos from ${batch.length} requests`);
+ //   console.log(`🔄 Processing CoinGecko batch: ${allIds.length} unique cryptos from ${batch.length} requests`);
 
     try {
       if (!this.isProviderAvailable('coingecko')) {

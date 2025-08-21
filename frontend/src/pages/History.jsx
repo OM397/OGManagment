@@ -9,6 +9,12 @@ import { useAssetSearch } from '../features/investment/useAssetSearch';
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { formatCurrency } from '../shared/formatCurrency';
 
+// Función para formatear precios con la moneda original del activo
+function formatPriceWithCurrency(price, currency = 'EUR') {
+  if (price == null || isNaN(price)) return '-';
+  return `${price.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+}
+
 export default function History() {
   // Selected asset info (id required)
   const [selectedAsset, setSelectedAsset] = useState(null); // react-select option
@@ -19,6 +25,7 @@ export default function History() {
   const [error, setError] = useState(null);
   const [price, setPrice] = useState(null);
   const [history, setHistory] = useState([]); // [{date, price}]
+  const [assetCurrency, setAssetCurrency] = useState('EUR'); // Moneda original del activo
   const [amount, setAmount] = useState(1000);
   const [years, setYears] = useState(5);
   const [expectedAnnualPct, setExpectedAnnualPct] = useState(''); // optional override
@@ -52,17 +59,25 @@ export default function History() {
     const first = history.find(p => p.price != null)?.price;
     const last = [...history].reverse().find(p => p.price != null)?.price;
     if (!first || !last) return { firstPrice: null, lastPrice: null, histAnnualReturn: null };
-    const elapsedDays = history.filter(p => p.price != null).length; // approximate
-    if (elapsedDays < 2) return { firstPrice: first, lastPrice: last, histAnnualReturn: null };
-    const dailyFactor = Math.pow(last / first, 1 / (elapsedDays - 1));
-    const annual = Math.pow(dailyFactor, 365) - 1;
-    return { firstPrice: first, lastPrice: last, histAnnualReturn: annual };
+    
+    // Usar performance metrics de 1 año en lugar de extrapolar desde 30 días
+    // El histAnnualReturn ahora se calcula desde performance, no desde histórico de 30 días
+    return { firstPrice: first, lastPrice: last, histAnnualReturn: null };
   }, [history]);
 
   const effectiveAnnual = useMemo(() => {
     if (expectedAnnualPct !== '' && !isNaN(expectedAnnualPct)) return Number(expectedAnnualPct) / 100;
-    return histAnnualReturn ?? 0;
-  }, [expectedAnnualPct, histAnnualReturn]);
+    // Usar performance metrics de 1 año si está disponible, en lugar de histAnnualReturn
+    // Si no hay performance, intentar usar el precio actual como fallback
+    if (performance?.changes?.['1y'] != null) {
+      return performance.changes['1y'];
+    }
+    // Fallback: si tenemos precio actual y precio inicial del histórico, calcular retorno simple
+    if (price && firstPrice && price > 0 && firstPrice > 0) {
+      return (price - firstPrice) / firstPrice;
+    }
+    return 0;
+  }, [expectedAnnualPct, performance, price, firstPrice]);
 
   const projectedValue = useMemo(() => {
     if (!amount || !years) return null;
@@ -96,44 +111,46 @@ export default function History() {
       const backendType = assetType === 'Cryptos' ? 'crypto' : 'stock';
   // Crypto IDs must stay lowercase (CoinGecko). Stock symbols are case-sensitive; preserve original.
   const assetId = backendType === 'crypto' ? selectedAsset.id.toLowerCase() : selectedAsset.id;
-      // 1. Current price via /market-data (POST expects array)
-      const mdRes = await fetch(`${API_BASE}/market-data`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify([{ id: assetId, type: backendType }])
-      });
-  if (!mdRes.ok) throw new Error(`market-data error (${mdRes.status})`);
-      const md = await mdRes.json();
-  const group = backendType === 'crypto' ? md.cryptos : md.stocks;
-  // For stocks we stored lowercase keys earlier; try both forms
-  const entry = group?.[assetId] || group?.[assetId.toLowerCase?.()] || group?.[selectedAsset.id.toLowerCase?.()];
-  // ...existing code...
-      setPrice(entry?.eur ?? null);
-
-      // 2. History
-  // ...existing code...
-  // Append bypass=1 to ensure backend doesn't accidentally route through protected middleware in future refactors
-  const hRes = await fetch(`${API_BASE}/history?id=${encodeURIComponent(assetId)}&type=${backendType}&days=${days}&bypass=1`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
-  if (!hRes.ok) throw new Error(`history error (${hRes.status})`);
+      // 1. History (this will give us both history and current price)
+      // Append bypass=1 to ensure backend doesn't accidentally route through protected middleware in future refactors
+      const hRes = await fetch(`${API_BASE}/history?id=${encodeURIComponent(assetId)}&type=${backendType}&days=${days}&bypass=1`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
+      if (!hRes.ok) throw new Error(`history error (${hRes.status})`);
       const hd = await hRes.json();
+      console.log('History data received:', hd); // Debug log
+      console.log('History currency:', hd.currency); // Debug log
       const hist = (hd.history || []).map(p => ({ date: p.date, price: p.price }));
       setHistory(hist);
+      
+      // Set currency from historical data (more reliable than market data)
+      console.log('Setting currency from history data:', hd.currency || 'EUR'); // Debug log
+      setAssetCurrency(hd.currency || 'EUR');
+      
+      // Get current price from the last history entry
+      if (hist.length > 0) {
+        const lastEntry = hist[hist.length - 1];
+        setPrice(lastEntry.price);
+      }
 
-      // 3. Performance metrics (parallelizable, but sequential here for simplicity)
+      // 2. Performance metrics (parallelizable, but sequential here for simplicity)
       try {
-  const pRes = await fetch(`${API_BASE}/performance?id=${encodeURIComponent(assetId)}&type=${backendType}`, { credentials: 'include' });
+        const pRes = await fetch(`${API_BASE}/performance?id=${encodeURIComponent(assetId)}&type=${backendType}`, { credentials: 'include' });
         if (pRes.ok) {
           const perf = await pRes.json();
-          setPerformance(perf);
+          console.log('Performance data received:', perf); // Debug log
+          setPerformance(perf?.data || perf); // Handle both wrapped and unwrapped responses
           // Autocomplete expected annual % only if empty (user hasn't typed) and 1y available
-          if (perf?.changes?.['1y'] != null && expectedAnnualPct === '') {
-            setExpectedAnnualPct((perf.changes['1y'] * 100).toFixed(2));
+          const performanceData = perf?.data || perf;
+          if (performanceData?.changes?.['1y'] != null && expectedAnnualPct === '') {
+            setExpectedAnnualPct((performanceData.changes['1y'] * 100).toFixed(2));
           }
         } else {
+          console.warn('Performance request failed:', pRes.status, pRes.statusText);
           setPerformance(null);
         }
-      } catch { setPerformance(null); }
+      } catch (error) {
+        console.error('Performance fetch error:', error);
+        setPerformance(null);
+      }
     } catch (e) {
   //    console.error(e);
       setError(e.message);
@@ -160,6 +177,7 @@ export default function History() {
   setPerformance(null);
   setHistory([]);
   setPrice(null);
+  setAssetCurrency('EUR'); // Reset currency
   setSelectedAsset(option);
   }
 
@@ -221,12 +239,12 @@ export default function History() {
                   tickFormatter={v => {
                     if (v == null || isNaN(v)) return '';
                     // Use compact formatting for large values, more precision for small ranges
-                    if (v >= 1000000) return '€' + (v/1_000_000).toFixed(2) + 'M';
-                    if (v >= 1000) return '€' + (v/1000).toFixed(1) + 'K';
-                    if (v >= 100) return '€' + v.toFixed(0);
-                    if (v >= 10) return '€' + v.toFixed(2);
-                    if (v >= 1) return '€' + v.toFixed(3);
-                    return '€' + v.toExponential(2);
+                    if (v >= 1000000) return assetCurrency + ' ' + (v/1_000_000).toFixed(2) + 'M';
+                    if (v >= 1000) return assetCurrency + ' ' + (v/1000).toFixed(1) + 'K';
+                    if (v >= 100) return assetCurrency + ' ' + v.toFixed(0);
+                    if (v >= 10) return assetCurrency + ' ' + v.toFixed(2);
+                    if (v >= 1) return assetCurrency + ' ' + v.toFixed(3);
+                    return assetCurrency + ' ' + v.toExponential(2);
                   }}
                   allowDecimals
                 />
@@ -236,11 +254,11 @@ export default function History() {
             </ResponsiveContainer>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <Info label="First" value={formatCurrency(firstPrice)} />
-            <Info label="Last" value={formatCurrency(lastPrice)} />
-            <Info label="Hist. Annual" value={histAnnualReturn != null ? (histAnnualReturn*100).toFixed(2)+'%' : '-'} />
-            <Info label="Current Price" value={formatCurrency(price)} />
+            <Info label="First" value={formatPriceWithCurrency(firstPrice, assetCurrency)} />
+            <Info label="Last" value={formatPriceWithCurrency(lastPrice, assetCurrency)} />
+            <Info label="Current Price" value={formatPriceWithCurrency(price, assetCurrency)} />
           </div>
+          {console.log('Rendering with assetCurrency:', assetCurrency)} {/* Debug log */}
           {performance?.changes && (
             <div className="mt-3 border-t pt-3">
               <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Performance</p>
@@ -260,8 +278,8 @@ export default function History() {
             <li><span className="text-gray-500">Years:</span> {years}</li>
             <li><span className="text-gray-500">Projected Value:</span> {projectedValue!=null? formatCurrency(projectedValue): '-'}</li>
           </ul>
-          {histAnnualReturn!=null && expectedAnnualPct===''
-            && <p className="text-xs text-gray-500">Usando retorno anual derivado del histórico mostrado (puedes sobrescribir).</p>}
+          {performance?.changes?.['1y'] != null && expectedAnnualPct === ''
+            && <p className="text-xs text-gray-500">Usando retorno anual de 1 año real (puedes sobrescribir).</p>}
         </div>
       </section>
 

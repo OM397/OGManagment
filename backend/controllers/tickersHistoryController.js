@@ -29,7 +29,7 @@ function normalizeHistory(history, fullDateRange) {
 exports.getHistoricalData = async (req, res) => {
   const { id, type, bypass, days } = req.query;
   if (process.env.NODE_ENV !== 'production') {
-    console.log('[history] incoming', { path: req.path, originalUrl: req.originalUrl, id, type, bypass, hasAuthHeader: !!req.headers.authorization, cookies: Object.keys(req.cookies||{}) });
+   // console.log('[history] incoming', { path: req.path, originalUrl: req.originalUrl, id, type, bypass, hasAuthHeader: !!req.headers.authorization, cookies: Object.keys(req.cookies||{}) });
   }
   if (!id || !type) return res.status(400).json({ error: 'Missing id or type' });
 

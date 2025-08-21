@@ -5,7 +5,11 @@ import { getCurrentPrice } from '../../shared/getCurrentPrice';
 
 export default function usePortfolioOverview(categoryGroups, marketData) {
   const [sevenDayData, setSevenDayData] = useState({});
+  const [thirtyDayData, setThirtyDayData] = useState({});
+  const [oneYearData, setOneYearData] = useState({});
   const [loading7d, setLoading7d] = useState(true);
+  const [loading30d, setLoading30d] = useState(true);
+  const [loading1y, setLoading1y] = useState(true);
 
   // --- IRR logic (migrated from usePortfolioIRR) ---
   const { irr: irrData } = useInvestmentsIRR();
@@ -21,6 +25,36 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
       return data.history;
     } catch (error) {
       console.error('Error fetching 7-day data:', error);
+      return null;
+    }
+  };
+
+  // Función para obtener datos históricos de 30 días
+  const fetchThirtyDayData = async (asset) => {
+    try {
+      const response = await fetch(`/api/history?id=${asset.id}&type=${asset.type}&days=30`, {
+        credentials: 'include'
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.history;
+    } catch (error) {
+      console.error('Error fetching 30-day data:', error);
+      return null;
+    }
+  };
+
+  // Función para obtener datos históricos de 1 año
+  const fetchOneYearData = async (asset) => {
+    try {
+      const response = await fetch(`/api/history?id=${asset.id}&type=${asset.type}&days=365`, {
+        credentials: 'include'
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.history;
+    } catch (error) {
+      console.error('Error fetching 1-year data:', error);
       return null;
     }
   };
@@ -61,6 +95,84 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
 
     if (categoryGroups?.Investments) {
       fetchAllSevenDayData();
+    }
+  }, [categoryGroups]);
+
+  // Obtener datos de 30 días para todos los assets
+  useEffect(() => {
+    const fetchAllThirtyDayData = async () => {
+      setLoading30d(true);
+      const assets = [];
+      Object.entries(categoryGroups?.Investments || {}).forEach(([groupName, groupAssets]) => {
+        if (Array.isArray(groupAssets)) {
+          groupAssets.forEach(asset => {
+            if (asset?.id && asset?.name && (asset.type === 'stock' || asset.type === 'crypto')) {
+              assets.push(asset);
+            }
+          });
+        }
+      });
+
+      const thirtyDayResults = {};
+      await Promise.all(
+        assets.map(async (asset) => {
+          const history = await fetchThirtyDayData(asset);
+          if (history && history.length >= 2) {
+            const currentPrice = history[history.length - 1]?.price || 0;
+            const thirtyDaysAgoPrice = history[0]?.price || 0;
+            const changePercent = thirtyDaysAgoPrice > 0 ? ((currentPrice - thirtyDaysAgoPrice) / thirtyDaysAgoPrice) * 100 : 0;
+            thirtyDayResults[asset.id] = changePercent;
+          } else {
+            thirtyDayResults[asset.id] = 0;
+          }
+        })
+      );
+      
+      setThirtyDayData(thirtyDayResults);
+      setLoading30d(false);
+    };
+
+    if (categoryGroups?.Investments) {
+      fetchAllThirtyDayData();
+    }
+  }, [categoryGroups]);
+
+  // Obtener datos de 1 año para todos los assets
+  useEffect(() => {
+    const fetchAllOneYearData = async () => {
+      setLoading1y(true);
+      const assets = [];
+      Object.entries(categoryGroups?.Investments || {}).forEach(([groupName, groupAssets]) => {
+        if (Array.isArray(groupAssets)) {
+          groupAssets.forEach(asset => {
+            if (asset?.id && asset?.name && (asset.type === 'stock' || asset.type === 'crypto')) {
+              assets.push(asset);
+            }
+          });
+        }
+      });
+
+      const oneYearResults = {};
+      await Promise.all(
+        assets.map(async (asset) => {
+          const history = await fetchOneYearData(asset);
+          if (history && history.length >= 2) {
+            const currentPrice = history[history.length - 1]?.price || 0;
+            const oneYearAgoPrice = history[0]?.price || 0;
+            const changePercent = oneYearAgoPrice > 0 ? ((currentPrice - oneYearAgoPrice) / oneYearAgoPrice) * 100 : 0;
+            oneYearResults[asset.id] = changePercent;
+          } else {
+            oneYearResults[asset.id] = 0;
+          }
+        })
+      );
+      
+      setOneYearData(oneYearResults);
+      setLoading1y(false);
+    };
+
+    if (categoryGroups?.Investments) {
+      fetchAllOneYearData();
     }
   }, [categoryGroups]);
 
@@ -116,6 +228,8 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
     const irrFromAPI = (typeof assetIRR === 'number' && !isNaN(assetIRR)) ? assetIRR : null;
     const irrValue = irrFromAPI !== null ? irrFromAPI : calculateSimpleIRR(asset);
     const sevenDayChange = sevenDayData[asset.id] || 0;
+    const thirtyDayChange = thirtyDayData[asset.id] || 0;
+    const oneYearChange = oneYearData[asset.id] || 0;
     
     return {
       ...asset,
@@ -124,7 +238,9 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
       pnl: currentValue - initialValue,
       pnlPercent: initialValue > 0 ? ((currentValue - initialValue) / initialValue) * 100 : 0,
       irrValue,
-      sevenDayChange
+      sevenDayChange,
+      thirtyDayChange,
+      oneYearChange
     };
   });
 
@@ -132,6 +248,8 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
     assets: assetsWithValues,
     totalCurrent: assetsWithValues.reduce((sum, a) => sum + a.currentValue, 0),
     totalInitial: assetsWithValues.reduce((sum, a) => sum + a.initialValue, 0),
-    loading7d
+    loading7d,
+    loading30d,
+    loading1y
   };
 }

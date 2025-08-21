@@ -33,7 +33,7 @@ exports.getInvestmentsIRR = async (req, res) => {
       for (const inv of investments) {
         // Espera: { id, name, initialQty, initialCost, type, initialDate }
         if (!inv.id || !inv.type || !inv.initialQty || !inv.initialCost) {
-          console.log(`Skipping investment for missing fields:`, inv);
+         // console.log(`Skipping investment for missing fields:`, inv);
           continue;
         }
         // Obtener histórico de precios y moneda real
@@ -45,25 +45,25 @@ exports.getInvestmentsIRR = async (req, res) => {
        // console.log(`\n---\nGROUP: ${groupName} | INVESTMENT: ${inv.name} (${inv.id})`);
        // console.log('History:', historyData);
         if (!historyData || !historyData.history || !historyData.history.length) {
-          console.log('No history data, skipping.');
+         // console.log('No history data, skipping.');
           results[inv.id] = { irr: null, id: inv.id, name: inv.name, group: groupName, reason: 'No history data' };
           continue;
         }
         // Calcular initialValueEUR y actualValueEUR si faltan
         let initialValueEUR = inv.initialValueEUR;
         let actualValueEUR = inv.actualValueEUR;
-        console.log('inv.actualValue:', inv.actualValue);
+       // console.log('inv.actualValue:', inv.actualValue);
         if (!isFinite(actualValueEUR) && inv.actualValue !== undefined && inv.actualValue !== null) {
           const parsedActual = Number(inv.actualValue);
           if (isFinite(parsedActual)) {
             actualValueEUR = parsedActual;
           }
         }
-        console.log(`\n---\nINVESTMENT: ${inv.name} (${inv.id})`);
-        console.log('initialValueEUR (antes):', initialValueEUR, 'actualValueEUR (antes):', actualValueEUR);
+       // console.log(`\n---\nINVESTMENT: ${inv.name} (${inv.id})`);
+       // console.log('initialValueEUR (antes):', initialValueEUR, 'actualValueEUR (antes):', actualValueEUR);
         // Si faltan, calcular usando initialCost, initialQty, actualCost, actualQty y conversión a EUR
         if (!isFinite(initialValueEUR)) {
-          console.log('Calculando initialValueEUR...');
+         // console.log('Calculando initialValueEUR...');
           // initialCost y initialQty pueden estar en cualquier moneda
           let cost = inv.initialCost;
           let qty = inv.initialQty;
@@ -87,7 +87,7 @@ exports.getInvestmentsIRR = async (req, res) => {
           }
         }
         if (!isFinite(actualValueEUR)) {
-          console.log('Calculando actualValueEUR...');
+         // console.log('Calculando actualValueEUR...');
           let cost = inv.actualCost;
           let qty = inv.actualQty;
           let currency = inv.actualCurrency || inv.currency || 'EUR';
@@ -108,9 +108,9 @@ exports.getInvestmentsIRR = async (req, res) => {
             }
           }
         }
-        console.log('initialValueEUR (final):', initialValueEUR, 'actualValueEUR (final):', actualValueEUR);
+      //  console.log('initialValueEUR (final):', initialValueEUR, 'actualValueEUR (final):', actualValueEUR);
         if (!isFinite(initialValueEUR) || !isFinite(actualValueEUR)) {
-          console.log('❌ Missing EUR values. initialValueEUR:', initialValueEUR, 'actualValueEUR:', actualValueEUR);
+         // console.log('❌ Missing EUR values. initialValueEUR:', initialValueEUR, 'actualValueEUR:', actualValueEUR);
           results[inv.id] = { irr: null, id: inv.id, name: inv.name, group: groupName, reason: 'Missing EUR values' };
           continue;
         }
@@ -122,7 +122,7 @@ exports.getInvestmentsIRR = async (req, res) => {
           years = diffMs / (1000 * 60 * 60 * 24 * 365.25);
         }
         if (!isFinite(initialValueEUR) || !isFinite(actualValueEUR) || years <= 0) {
-          console.log('❌ Invalid values or years. initialValueEUR:', initialValueEUR, 'actualValueEUR:', actualValueEUR, 'years:', years);
+         // console.log('❌ Invalid values or years. initialValueEUR:', initialValueEUR, 'actualValueEUR:', actualValueEUR, 'years:', years);
           results[inv.id] = { irr: null, id: inv.id, name: inv.name, group: groupName, reason: 'Invalid values or years' };
           continue;
         }
@@ -132,10 +132,10 @@ exports.getInvestmentsIRR = async (req, res) => {
           irr = Math.pow(actualValueEUR / initialValueEUR, 1 / years) - 1;
         }
         if (irr === null) {
-          console.log('IRR did not converge or is not computable.');
+         // console.log('IRR did not converge or is not computable.');
           results[inv.id] = { irr: null, id: inv.id, name: inv.name, group: groupName, reason: 'IRR did not converge' };
         } else {
-          console.log('IRR result:', irr);
+         // console.log('IRR result:', irr);
           results[inv.id] = { irr, id: inv.id, name: inv.name, group: groupName };
         }
       }

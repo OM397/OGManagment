@@ -16,11 +16,11 @@ exports.getTickers = async (req, res) => {
   try {
     // Fetch if expired
     if (!cachedCryptos.length || now - lastFetchTime > CACHE_TTL) {
-      console.log('🌐 Fetching CoinGecko coin list...');
+    //  console.log('🌐 Fetching CoinGecko coin list...');
       const { data } = await axios.get('https://api.coingecko.com/api/v3/coins/list');
       cachedCryptos = data;
       lastFetchTime = now;
-      console.log(`✅ Loaded ${data.length} crypto tickers`);
+    //  console.log(`✅ Loaded ${data.length} crypto tickers`);
     }
 
     const result = !query
@@ -44,7 +44,7 @@ exports.searchStocks = async (req, res) => {
   }
 
   try {
-    console.log('🔍 Searching stocks for:', query);
+  //  console.log('🔍 Searching stocks for:', query);
     let stocks = [];
 
     // 1) Try Yahoo first (better coverage and naming)
@@ -59,7 +59,7 @@ exports.searchStocks = async (req, res) => {
 
     // 2) Fallback to TwelveData if Yahoo didn't return usable results
     if (stocks.length === 0) {
-      console.log('🔁 Falling back to TwelveData search');
+    //  console.log('🔁 Falling back to TwelveData search');
       const tdResults = await twelveData.searchSymbol(query);
       if (Array.isArray(tdResults)) {
         stocks = tdResults.map(item => ({
@@ -70,7 +70,7 @@ exports.searchStocks = async (req, res) => {
       }
     }
 
-    console.log(`✅ Found ${stocks.length} result(s)`);
+   // console.log(`✅ Found ${stocks.length} result(s)`);
     res.json({ result: stocks });
   } catch (err) {
     console.error('❌ Stock search error:', err.message);
@@ -86,9 +86,9 @@ exports.getMarketData = async (req, res) => {
   }
 
   try {
-    console.log('📥 Market data request received:', tickers);
+   // console.log('📥 Market data request received:', tickers);
       const result = await marketData.getCurrentQuotes(tickers);
-      console.log('✅ Market data response:', result);
+   //   console.log('✅ Market data response:', result);
       // Envolver en formato estándar
       res.json({
         data: result,

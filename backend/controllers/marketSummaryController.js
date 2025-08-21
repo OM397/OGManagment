@@ -17,8 +17,8 @@ async function buildSummary(options = {}) {
     ...STOCKS.map(id => ({ id, type: 'stock' }))
   ];
   const quotes = await getCurrentQuotes(tickers);
-  console.log('DEBUG marketSummary quotes.cryptos:', quotes.cryptos);
-  console.log('DEBUG marketSummary quotes.stocks:', quotes.stocks);
+//  console.log('DEBUG marketSummary quotes.cryptos:', quotes.cryptos);
+//  console.log('DEBUG marketSummary quotes.stocks:', quotes.stocks);
 
   const assets = [];
 
@@ -159,7 +159,7 @@ module.exports.buildSummary = buildSummary;
 module.exports.clearCache = async function clearCache() {
   try {
     await redis.del(CACHE_KEY);
-    console.log('✅ Market Summary cache cleared');
+ //   console.log('✅ Market Summary cache cleared');
     return true;
   } catch (e) {
     console.error('❌ Error clearing Market Summary cache:', e.message);
