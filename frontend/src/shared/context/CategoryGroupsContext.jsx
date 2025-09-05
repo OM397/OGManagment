@@ -5,6 +5,7 @@ import apiClient from '../services/apiService';
 import { API_BASE } from '../config';
 
 const CategoryGroupsContext = createContext();
+export { CategoryGroupsContext };
 export const useCategoryGroups = () => useContext(CategoryGroupsContext);
 
 export const CategoryGroupsProvider = ({ initialData, children }) => {

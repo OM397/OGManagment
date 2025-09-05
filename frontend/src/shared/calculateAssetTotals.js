@@ -16,6 +16,7 @@ export function calculateTotals(categoryGroups = {}, marketData = {}, filter = n
     // new use case: exact category name
     categoriesToUse = { [filter]: categoryGroups?.[filter] || {} };
   }
+  
 // ...existing code...
 Object.values(categoriesToUse || {}).forEach(category => {
   Object.values(category || {}).forEach(group => {
@@ -39,7 +40,7 @@ Object.values(categoriesToUse || {}).forEach(category => {
 
       const actualPrice =
         type === 'manual'
-          ? Number(manualValue ?? 0)
+          ? Number(actualCost ?? manualValue ?? 0)
           : Number(actualCost ??
               marketData?.cryptos?.[key]?.eur ??
               marketData?.stocks?.[key]?.eur ??
@@ -47,13 +48,17 @@ Object.values(categoriesToUse || {}).forEach(category => {
 
       const actualValue = qty * actualPrice;
 
+
       totalInitial += qty * cost;
       totalActual += actualValue;
     });
   });
 });
 
+// Para Real Estate, asegurar que siempre tenga 2 decimales
+const isRealEstate = filter === 'Real Estate' || (categoriesToUse && categoriesToUse['Real Estate']);
+
 return {
   totalInitial: Number(totalInitial.toFixed(2)),
-  totalActual: Number(totalActual.toFixed(2))
+  totalActual: isRealEstate ? parseFloat(totalActual.toFixed(2)) : Number(totalActual.toFixed(2))
 };}

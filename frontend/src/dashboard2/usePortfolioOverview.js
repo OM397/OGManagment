@@ -24,7 +24,7 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
       const data = await response.json();
       return data.history;
     } catch (error) {
-      console.error('Error fetching 7-day data:', error);
+      // Silenciar errores de API para evitar spam en consola
       return null;
     }
   };
@@ -39,7 +39,7 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
       const data = await response.json();
       return data.history;
     } catch (error) {
-      console.error('Error fetching 30-day data:', error);
+      // Silenciar errores de API para evitar spam en consola
       return null;
     }
   };
@@ -54,7 +54,7 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
       const data = await response.json();
       return data.history;
     } catch (error) {
-      console.error('Error fetching 1-year data:', error);
+      // Silenciar errores de API para evitar spam en consola
       return null;
     }
   };

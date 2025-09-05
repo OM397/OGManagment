@@ -153,12 +153,10 @@ export default function Login() {
           setInfo('✅ Revisa tu correo para la contraseña temporal.');
         }
       } else {
-  console.log('[Login] Enviando credenciales...');
   const data = await authAPI.login(trimmedUsername, trimmedPassword);
         if (!data?.success) throw new Error('Operación fallida.');
   // Usar el contexto de autenticación
         await login({ uid: data.uid, role: data.role, maskedEmail: data.maskedEmail });
-  console.log('[Login] Éxito. uid=', data.uid, 'role=', data.role, 'tokenId=', data.tokenId);
         // Redirección: solo ir a /admin si el usuario estaba en /admin
         setTimeout(() => {
           if (data.role === 'admin' && location.pathname.startsWith('/admin')) {

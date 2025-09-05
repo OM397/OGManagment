@@ -11,7 +11,7 @@ export default function AnimatedNumber({ value }) {
 
   return (
     <animated.span>
-      {number.to(val => formatter.format(Number(val.toFixed(0))))}
+      {number.to(val => formatter.format(val))}
     </animated.span>
   );
 }

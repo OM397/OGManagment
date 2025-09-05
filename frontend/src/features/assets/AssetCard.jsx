@@ -5,6 +5,7 @@ import useInvestmentsIRR from '../../shared/hooks/useInvestmentsIRR';
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
 import { useCategoryGroups } from '../../shared/context/CategoryGroupsContext';
 import { formatCurrency } from '../../shared/formatCurrency';
+import { calculateRealEstateNetValue } from '../../shared/utils';
 
 export default function AssetCard({
   asset,
@@ -38,6 +39,15 @@ export default function AssetCard({
   const initialValue = (initialCost || 0) * (initialQty || 0);
   const currentPrice = getCurrentPrice(asset, marketData);
   const actualValue = (currentPrice || 0) * (initialQty || 0);
+
+  // Calcular valor neto para Real Estate
+  let netValue = actualValue;
+  let remainingMortgage = 0;
+  if (activeTab === 'Real Estate' && asset.mortgageAmount) {
+    const netValueData = calculateRealEstateNetValue(asset, actualValue);
+    netValue = netValueData.netValue;
+    remainingMortgage = netValueData.remainingMortgage;
+  }
 
   // Fallback IRR (decimal) if API returns undefined/null. Uses current price and initial date.
   const fallbackIRRDecimal = (() => {
@@ -226,9 +236,24 @@ export default function AssetCard({
         </div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-3 ml-auto text-right w-full sm:w-auto">
+          {/* Valor bruto y neto para Real Estate */}
+          {activeTab === 'Real Estate' && asset.mortgageAmount ? (
+            <div className="text-right">
+              <div className="text-base font-medium text-gray-900">
+                {formatCurrency((actualValue || 0).toFixed(2))}
+                <span className="text-xs text-gray-500 ml-2">(Bruto)</span>
+              </div>
+              <div className="text-sm font-medium text-blue-600">
+                {formatCurrency((netValue || 0).toFixed(2))}
+                <span className="text-xs text-gray-500 ml-2">(Neto)</span>
+              </div>
+            </div>
+          ) : (
           <div className="text-base font-medium text-gray-900">
             {formatCurrency((actualValue || 0).toFixed(2))}
           </div>
+          )}
+          
           <div className={`text-sm font-medium ${((actualValue || 0) >= (initialValue || 0) ? 'text-green-600' : 'text-red-600')}`}> 
             {formatCurrency(((actualValue || 0) - (initialValue || 0)).toFixed(2))} 
             ({(initialValue > 0 ? (((actualValue || 0) - (initialValue || 0)) / (initialValue || 1)) * 100 : 0).toFixed(1)}%)
@@ -344,7 +369,38 @@ export default function AssetCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-sm text-gray-600 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6 text-sm text-gray-600 mt-4">
+            {/* Campos específicos para Real Estate - ORDEN CAMBIADO */}
+            {activeTab === 'Real Estate' && asset.mortgageAmount && (
+              <div>
+                <div className="text-gray-500 text-sm font-medium mb-2">Mortgage Amount</div>
+                <div className="text-gray-900 font-medium">{formatCurrency(asset.mortgageAmount.toFixed(2))}</div>
+              </div>
+            )}
+
+            {activeTab === 'Real Estate' && asset.monthlyMortgagePayment && (
+              <div>
+                <div className="text-gray-500 text-sm font-medium mb-2">Monthly Mortgage</div>
+                <div className="text-gray-900 font-medium">{formatCurrency(asset.monthlyMortgagePayment.toFixed(2))}</div>
+              </div>
+            )}
+
+            {activeTab === 'Real Estate' && asset.monthlyRentalIncome && (
+              <div>
+                <div className="text-gray-500 text-sm font-medium mb-2">Monthly Rental</div>
+                <div className="text-gray-900 font-medium">{formatCurrency(asset.monthlyRentalIncome.toFixed(2))}</div>
+              </div>
+            )}
+
+            {/* Hipoteca restante para Real Estate */}
+            {activeTab === 'Real Estate' && asset.mortgageAmount && (
+              <div>
+                <div className="text-gray-500 text-sm font-medium mb-2">Remaining Mortgage</div>
+                <div className="text-gray-900 font-medium">{formatCurrency(remainingMortgage.toFixed(2))}</div>
+              </div>
+            )}
+
+            {/* Initial Date - AHORA COMO ÚLTIMO */}
             <div>
               <div className="text-gray-500 text-sm font-medium mb-2">Initial Date</div>
               {editMode ? (
@@ -372,6 +428,14 @@ export default function AssetCard({
                 </div>
               )}
             </div>
+
+            {/* Día de actualización mensual para Real Estate */}
+            {activeTab === 'Real Estate' && asset.monthlyUpdateDay && (
+              <div>
+                <div className="text-gray-500 text-sm font-medium mb-2">Monthly Update Day</div>
+                <div className="text-gray-900 font-medium">{asset.monthlyUpdateDay}</div>
+              </div>
+            )}
           </div>
 
           {editMode && (

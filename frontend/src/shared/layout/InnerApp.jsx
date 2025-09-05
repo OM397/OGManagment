@@ -5,10 +5,12 @@ import AppLayout from '../../layouts/AppLayout';
 import Assets from '../../pages/Assets';
 import History from '../../pages/History';
 import Dashboard2 from '../../pages/Dashboard2';
+import RealEstateDashboard from '../../pages/RealEstateDashboard';
 import ChangePasswordModal from '../ChangePasswordModal';
 import MailingSettingsModal from '../MailingSettingsModal';
 import useMarketData from '../../features/assets/useMarketData';
-import { useCategoryGroups } from '../context/CategoryGroupsContext';
+// ✅ Usar nuestro hook personalizado en lugar del del contexto
+import useCategoryGroups from '../../features/assets/useCategoryGroups';
 
 export default function InnerApp({ user, onLogout }) {
   const { categoryGroups, setCategoryGroups } = useCategoryGroups();
@@ -83,6 +85,8 @@ export default function InnerApp({ user, onLogout }) {
         return <History />;
       case 'Dashboard2':
         return <Dashboard2 {...commonProps} />;
+      case 'RealEstateDashboard':
+        return <RealEstateDashboard {...commonProps} />; // ✅ AGREGAR props
       default:
         return <Dashboard2 {...commonProps} />;
     }

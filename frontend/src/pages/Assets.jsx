@@ -41,7 +41,7 @@ export default function Assets({
   const [allExpanded, setAllExpanded] = useState(true);
 
   // Normaliza el valor de activeTab para que coincida con la clave del estado
-  const normalizedTab = activeTab === 'RealEstate' ? 'Real Estate' : activeTab;
+  const normalizedTab = activeTab;
   const normalizedGroups = categoryGroups[normalizedTab] || {};
   const assets = Object.values(normalizedGroups).flat();
   const isEmpty = Object.keys(normalizedGroups).length === 0;
@@ -237,7 +237,7 @@ export default function Assets({
           onDeleteAsset={handleDeleteAsset}
           onDeleteGroup={handleDeleteGroup}
           onRenameGroup={handleRenameGroup}
-          activeTab={normalizedTab}
+          activeTab={activeTab}
           lastAddedGroupName={lastAddedGroupName}
           lastAddedAssetId={lastAddedAssetId}
           setLastAddedAssetId={setLastAddedAssetId}

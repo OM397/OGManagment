@@ -1,6 +1,6 @@
 // 📁 frontend/src/shared/Sidebar.jsx
-import React from 'react';
-import { BarChart2, Gem, Clock } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { BarChart2, Gem, Clock, Home } from 'lucide-react';
 import { calculateTotals } from './calculateAssetTotals';
 import AnimatedNumber from './AnimatedNumber'; // ✅ import animation
 import { formatter } from './utils';
@@ -8,19 +8,27 @@ import usePortfolioOverview from '../dashboard2/usePortfolioOverview';
 
 export default function Sidebar({ selected, setSelected, categoryGroups = {}, marketData = {}, isOpen = true, onClose }) {
   const navItems = [
-    { name: 'Net Worth', label: 'Investments', icon: <BarChart2 size={18} /> },
     { name: 'Assets', label: 'Assets', icon: <Gem size={18} /> },
+    { name: 'Net Worth', label: 'Investments', icon: <BarChart2 size={18} /> },
+    { name: 'RealEstateDashboard', label: 'Real Estate', icon: <Home size={18} /> },
     { name: 'History', label: 'History', icon: <Clock size={18} /> }
   ];
 
   // Usar el mismo hook que Dashboard2 para el total actual de inversiones
   const { totalCurrent } = usePortfolioOverview(categoryGroups, marketData);
+  
   // Calcular el total de Assets (Investments + Real Estate + Others)
   const assetGroups = ['Investments', 'Real Estate', 'Others'];
   const filteredGroups = Object.fromEntries(
     Object.entries(categoryGroups).filter(([key]) => assetGroups.includes(key))
   );
   const { totalActual: totalAssets } = calculateTotals(filteredGroups, marketData);
+  
+  // ✅ Calcular Real Estate usando la misma lógica que los otros
+  const realEstateGroups = Object.fromEntries(
+    Object.entries(categoryGroups).filter(([key]) => key === 'Real Estate')
+  );
+  const { totalActual: realEstateTotal = 0 } = calculateTotals(realEstateGroups, marketData);
 
   // Permitir cierre del sidebar en móvil si se pasa la prop onClose
   const handleSelect = (name) => {
@@ -32,7 +40,7 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
   return (
     <>
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-full sm:w-72 sm:min-w-[18rem] sm:max-w-[18rem] shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm transform transition-transform duration-300 ease-in-out lg:transform-none ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-full sm:w-72 sm:min-w-[18rem] sm:max-w-[18rem] shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col justify-between shadow-sm transform transition-transform duration-300 ease-out lg:transform-none ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{ touchAction: 'manipulation' }}
       >
         <div>
@@ -50,6 +58,7 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
               let animatedValue = null;
               if (name === 'Net Worth') animatedValue = totalCurrent;
               if (name === 'Assets') animatedValue = totalAssets;
+              if (name === 'RealEstateDashboard') animatedValue = realEstateTotal;
 
               return (
                 <button
@@ -71,12 +80,15 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
                       {name === 'Net Worth' && (
                         <span className={`text-xs ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>Dashboard</span>
                       )}
+                      {name === 'RealEstateDashboard' && (
+                        <span className={`text-xs ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>Dashboard</span>
+                      )}
                     </div>
                   </div>
 
                   {animatedValue !== null ? (
                     <span className={`text-sm font-medium tabular-nums ${isActive ? 'text-gray-200' : 'text-gray-600'}`}>
-                      <AnimatedNumber value={animatedValue} />
+                      {formatter.format(animatedValue)}
                     </span>
                   ) : null}
                 </button>

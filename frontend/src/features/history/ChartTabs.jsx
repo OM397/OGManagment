@@ -52,7 +52,7 @@ function FilterTab({ active, label, onClick, title }) {
     <button
       type="button"
       title={title || label}
-      onClick={e => { console.log('[ChartTabs] FilterTab clicked:', label); onClick(e); }}
+      onClick={onClick}
       style={{ touchAction: 'manipulation' }}
       className={`relative min-w-[90px] basis-[90px] max-w-[120px] px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-indigo-500 shadow-sm border truncate ${
         active

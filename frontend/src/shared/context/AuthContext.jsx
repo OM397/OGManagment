@@ -79,7 +79,6 @@ export const AuthProvider = ({ children }) => {
 
       // Si tenemos datos de bootstrap (login reciente), usarlos
       if (bootstrap && bootstrap.uid && bootstrap.role) {
-        console.log('[AuthContext] Login optimista. uid=', bootstrap.uid, 'role=', bootstrap.role);
         // Usar maskedEmail si está disponible, sino uid como fallback
         const displayName = bootstrap.maskedEmail || bootstrap.uid;
         setAuth(displayName, bootstrap.role);

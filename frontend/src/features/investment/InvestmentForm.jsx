@@ -18,7 +18,12 @@ export default function InvestmentForm({
     cost: '',
     actualCost: '',
     group: '',
-    initialDate: ''
+    initialDate: '',
+    // Campos específicos para Real Estate
+    mortgageAmount: '',
+    monthlyMortgagePayment: '',
+    monthlyRentalIncome: '',
+    monthlyUpdateDay: ''
   });
   const [cryptos, setCryptos] = useState([]);
   const [assetType, setAssetType] = useState('Cryptos');
@@ -58,7 +63,7 @@ export default function InvestmentForm({
       return;
     }
     // Normaliza la clave del tab
-    const normalizedTab = activeTab === 'RealEstate' ? 'Real Estate' : activeTab;
+    const normalizedTab = activeTab;
     const isInv = normalizedTab === 'Investments';
     if (!isInv && (isNaN(actual) || actual <= 0)) {
       alert('Actual value is required for non-investments.');
@@ -87,6 +92,33 @@ export default function InvestmentForm({
     if (!isInv || assetType === 'Others') {
       newAsset.manualValue = price;
     }
+    
+    // Para Real Estate, también guardamos la fecha si existe
+    if (activeTab === 'Real Estate' && initialDate) {
+      newAsset.initialDate = initialDate;
+    }
+
+    // Campos específicos para Real Estate
+    if (activeTab === 'Real Estate') {
+      if (formData.mortgageAmount) {
+        newAsset.mortgageAmount = parseFloat(formData.mortgageAmount);
+      }
+      if (formData.monthlyMortgagePayment) {
+        newAsset.monthlyMortgagePayment = parseFloat(formData.monthlyMortgagePayment);
+      }
+      if (formData.monthlyRentalIncome) {
+        newAsset.monthlyRentalIncome = parseFloat(formData.monthlyRentalIncome);
+      }
+      if (formData.monthlyUpdateDay) {
+        newAsset.monthlyUpdateDay = parseInt(formData.monthlyUpdateDay);
+      }
+      // Inicializar historial de hipoteca
+      newAsset.mortgageHistory = [{
+        date: new Date().toISOString(),
+        remainingMortgage: parseFloat(formData.mortgageAmount) || 0,
+        netValue: (parseFloat(formData.cost) || 0) - (parseFloat(formData.mortgageAmount) || 0)
+      }];
+    }
 
     setCategoryGroups(prev => {
       const updated = { ...prev };
@@ -94,9 +126,7 @@ export default function InvestmentForm({
       const assets  = groups[group] || [];
       groups[group] = [...assets, newAsset];
       updated[normalizedTab] = groups;
-      // LOG: Asset añadido
-      console.log(`[InvestmentForm.jsx] Asset añadido en '${normalizedTab}' grupo '${group}':`, newAsset);
-      console.log('[InvestmentForm.jsx] Estado tras añadir asset:', updated);
+      // Asset añadido exitosamente
       return updated;
     });
 
@@ -104,7 +134,12 @@ export default function InvestmentForm({
 
     setFormData({
       name: '', id: '', quantity: '',
-      cost: '', actualCost: '', group: '', initialDate: ''
+      cost: '', actualCost: '', group: '', initialDate: '',
+      // Campos específicos para Real Estate
+      mortgageAmount: '',
+      monthlyMortgagePayment: '',
+      monthlyRentalIncome: '',
+      monthlyUpdateDay: ''
     });
     if (!showInline) onClose();
   };

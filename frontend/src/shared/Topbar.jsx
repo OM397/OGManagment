@@ -138,7 +138,7 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
                 Modificar contraseña
               </button>
               <button
-          //      onClick={e => { console.log('[Topbar] Email preferences clicked'); setShowEmailModal(true); setOpen(false); }}
+                onClick={e => { setShowEmailModal(true); setOpen(false); }}
                 style={{ 
                   cursor: 'pointer', 
                   WebkitTapHighlightColor: 'transparent',

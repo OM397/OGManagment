@@ -90,8 +90,7 @@ export default function GroupAssetList({
           setLastAddedAssetId(assetData.asset.id);
         }
         
-        // You could add a notification here
-        console.log(`✅ Moved "${assetData.asset.name}" to "${groupName}"`);
+        // Asset moved successfully
       } else {
         // Error feedback
         playSound('dropError');
