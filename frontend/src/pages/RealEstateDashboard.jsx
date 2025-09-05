@@ -50,8 +50,7 @@ export default function RealEstateDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="px-2 sm:px-4 py-3 sm:py-5 w-full max-w-none">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -256,7 +255,6 @@ export default function RealEstateDashboard() {
             )}
           </div>
         </div>
-      </div>
     </div>
   );
 }

@@ -6,6 +6,9 @@ import AdminPanel from '../../features/admin/AdminPanel';
 import RequireAuth from '../auth/RequireAuth';
 import { CategoryGroupsProvider } from '../context/CategoryGroupsContext';
 import InnerApp from '../layout/InnerApp';
+import PrivacyPolicy from '../../pages/PrivacyPolicy';
+import TermsOfService from '../../pages/TermsOfService';
+import CookiePolicy from '../../pages/CookiePolicy';
 
 export default function AppRoutes({ user, role, initialData, onLogout }) {
   return (
@@ -36,6 +39,10 @@ export default function AppRoutes({ user, role, initialData, onLogout }) {
           )
         }
       />
+      {/* Rutas legales - accesibles sin autenticación */}
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
+      <Route path="/cookie-policy" element={<CookiePolicy />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

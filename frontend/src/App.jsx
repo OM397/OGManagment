@@ -4,6 +4,8 @@ import './shared/styles/index.css';
 import AppRoutes from './shared/router/AppRoutes';
 import { LoadingSpinner } from './shared/design/components';
 import { AuthProvider, useAuth } from './shared/context/AuthContext';
+import EnhancedCookieBanner from './components/EnhancedCookieBanner';
+import Footer from './components/Footer';
 
 // Componente interno que usa el contexto
 function AppContent() {
@@ -19,19 +21,25 @@ function AppContent() {
   }
 
   return (
-    <Suspense fallback={
-      <div className="p-6 text-center">
-        <LoadingSpinner size="lg" className="mx-auto mb-4" />
-        <p>Cargando aplicación...</p>
-      </div>
-    }>
-      <AppRoutes
-        user={user}
-        role={role}
-        initialData={initialData}
-        onLogout={logout}
-      />
-    </Suspense>
+    <div className="min-h-screen flex flex-col">
+      <Suspense fallback={
+        <div className="p-6 text-center">
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
+          <p>Cargando aplicación...</p>
+        </div>
+      }>
+        <div className="flex-1">
+          <AppRoutes
+            user={user}
+            role={role}
+            initialData={initialData}
+            onLogout={logout}
+          />
+        </div>
+        <Footer />
+      </Suspense>
+      <EnhancedCookieBanner />
+    </div>
   );
 }
 

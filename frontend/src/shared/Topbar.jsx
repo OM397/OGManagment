@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { RefreshCw, UserCircle, ChevronDown, Menu, Mail, Key } from 'lucide-react';
+import { RefreshCw, UserCircle, ChevronDown, Menu, Mail, Key, FileText } from 'lucide-react';
 import { API_BASE } from './config';
 import apiClient from './services/apiService';
 import ChangePasswordModal from './ChangePasswordModal';
@@ -151,6 +151,18 @@ export default function Topbar({ currency = 'EUR €', onReload = () => {}, user
                 {emailPreference !== null && (
                   <div className={`w-2 h-2 rounded-full ${emailPreference ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                 )}
+              </button>
+              <button
+                onClick={e => { window.open('/terms-of-service', '_blank'); setOpen(false); }}
+                style={{ 
+                  cursor: 'pointer', 
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
+                className="flex items-center gap-3 w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <FileText size={16} className="text-gray-500" />
+                <div className="flex-1">Descargo Legal</div>
               </button>
               <hr className="my-1 border-gray-100" />
               <button
