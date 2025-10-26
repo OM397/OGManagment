@@ -12,6 +12,36 @@ export default function PortfolioOverview({ assets }) {
   const totalInitial = assets.reduce((sum, a) => sum + (a.initialValue || 0), 0);
   const totalReturn = totalInitial > 0 ? ((totalCurrent - totalInitial) / totalInitial) * 100 : 0;
   const displayAssetsCount = assets.length;
+  
+  // Calcular el IRR promedio ponderado del portafolio
+  // El IRR de cada asset viene en irrValue
+  // calculateSimpleIRR (fallback local) devuelve porcentaje (ej: 15.5 para 15.5%)
+  // La API del backend devuelve decimal (ej: 0.155 para 15.5%)
+  // Como usePortfolioOverview ya normaliza a porcentaje en irrValue, 
+  // solo necesitamos dividir entre el peso y retornar
+  const portfolioIRR = useMemo(() => {
+    let weightedSum = 0;
+    let totalWeight = 0;
+    
+    assets.forEach(asset => {
+      if (asset.initialValue > 0 && asset.irrValue != null && !isNaN(asset.irrValue)) {
+        // irrValue ya viene normalizado a porcentaje por usePortfolioOverview
+        // Lo convertimos a decimal para el cálculo ponderado
+        const irrDecimal = asset.irrValue / 100;
+        
+        weightedSum += irrDecimal * asset.initialValue;
+        totalWeight += asset.initialValue;
+      }
+    });
+    
+    if (totalWeight > 0) {
+      const portfolioIRRDecimal = weightedSum / totalWeight;
+      // Retornar como porcentaje para visualización
+      return portfolioIRRDecimal * 100;
+    }
+    
+    return 0;
+  }, [assets]);
 
   // Función para manejar el ordenamiento
   const handleSort = (key) => {
@@ -139,7 +169,7 @@ export default function PortfolioOverview({ assets }) {
   return (
     <div className="bg-white rounded-lg shadow-sm w-full p-4 sm:p-7 min-h-[300px] flex flex-col">
       <div className="mb-3 sm:mb-4 flex-shrink-0">
-        <div className="grid grid-cols-2 gap-2 sm:gap-4 p-2 sm:p-3 bg-gray-50 rounded-lg">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 p-2 sm:p-3 bg-gray-50 rounded-lg">
           <div className="text-center">
             <div className="text-lg sm:text-xl font-bold text-green-600">{displayAssetsCount}</div>
             <div className="text-xs text-gray-500">Total Assets</div>
@@ -149,6 +179,12 @@ export default function PortfolioOverview({ assets }) {
               {totalReturn > 0 ? '+' : ''}{totalReturn.toFixed(1)}%
             </div>
             <div className="text-xs text-gray-500">Total Return</div>
+          </div>
+          <div className="text-center">
+            <div className={`text-lg sm:text-xl font-bold ${portfolioIRR >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+              {portfolioIRR > 0 ? '+' : ''}{portfolioIRR.toFixed(1)}%
+            </div>
+            <div className="text-xs text-gray-500">IRR</div>
           </div>
         </div>
       </div>

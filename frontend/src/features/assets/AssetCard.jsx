@@ -23,6 +23,11 @@ export default function AssetCard({
   const [editQty, setEditQty] = useState(asset.initialQty || 0);
   const [editDate, setEditDate] = useState(asset.initialDate || '');
   const [editActual, setEditActual] = useState(asset.manualValue ?? asset.actualCost ?? 0);
+  // Campos específicos para Real Estate - usar undefined si no existe el valor
+  const [editMortgageAmount, setEditMortgageAmount] = useState(asset.mortgageAmount !== undefined ? asset.mortgageAmount : '');
+  const [editMonthlyMortgagePayment, setEditMonthlyMortgagePayment] = useState(asset.monthlyMortgagePayment !== undefined ? asset.monthlyMortgagePayment : '');
+  const [editMonthlyRentalIncome, setEditMonthlyRentalIncome] = useState(asset.monthlyRentalIncome !== undefined ? asset.monthlyRentalIncome : '');
+  const [editMonthlyUpdateDay, setEditMonthlyUpdateDay] = useState(asset.monthlyUpdateDay !== undefined ? asset.monthlyUpdateDay : '');
   const [editMode, setEditMode] = useState(false);
   const [highlight, setHighlight] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
@@ -126,6 +131,18 @@ export default function AssetCard({
     }
   }, [isHighlighted]);
 
+  // Actualizar estados de edición cuando cambie el asset
+  useEffect(() => {
+    setEditCost(asset.initialCost || 0);
+    setEditQty(asset.initialQty || 0);
+    setEditDate(asset.initialDate || '');
+    setEditActual(asset.manualValue ?? asset.actualCost ?? 0);
+    setEditMortgageAmount(asset.mortgageAmount !== undefined ? asset.mortgageAmount : '');
+    setEditMonthlyMortgagePayment(asset.monthlyMortgagePayment !== undefined ? asset.monthlyMortgagePayment : '');
+    setEditMonthlyRentalIncome(asset.monthlyRentalIncome !== undefined ? asset.monthlyRentalIncome : '');
+    setEditMonthlyUpdateDay(asset.monthlyUpdateDay !== undefined ? asset.monthlyUpdateDay : '');
+  }, [asset]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (openMenu && !e.target.closest('.asset-options-menu')) {
@@ -151,6 +168,12 @@ export default function AssetCard({
       return;
     }
 
+    // Campos adicionales para Real Estate - parsear solo si hay valor
+    const parsedMortgageAmount = editMortgageAmount === '' ? 0 : parseFloat(editMortgageAmount);
+    const parsedMonthlyMortgagePayment = editMonthlyMortgagePayment === '' ? 0 : parseFloat(editMonthlyMortgagePayment);
+    const parsedMonthlyRentalIncome = editMonthlyRentalIncome === '' ? 0 : parseFloat(editMonthlyRentalIncome);
+    const parsedMonthlyUpdateDay = editMonthlyUpdateDay === '' ? undefined : parseInt(editMonthlyUpdateDay);
+
     // This is the only part needed. The context handles the API call automatically.
     setCategoryGroups(prev => {
       const updated = { ...prev };
@@ -158,13 +181,23 @@ export default function AssetCard({
       const group = groups[groupName] || [];
       
       if (group[assetIndex]) {
-        group[assetIndex] = {
+        const updatedAsset = {
           ...group[assetIndex],
           initialCost: parsedCost,
           initialQty: parsedQty,
           initialDate: editDate,
           ...(type === 'manual' && { manualValue: parsedActual })
         };
+
+        // Agregar campos de Real Estate si existen y no son 0 o undefined
+        if (activeTab === 'Real Estate') {
+          if (!isNaN(parsedMortgageAmount) && parsedMortgageAmount > 0) updatedAsset.mortgageAmount = parsedMortgageAmount;
+          if (!isNaN(parsedMonthlyMortgagePayment) && parsedMonthlyMortgagePayment > 0) updatedAsset.monthlyMortgagePayment = parsedMonthlyMortgagePayment;
+          if (!isNaN(parsedMonthlyRentalIncome) && parsedMonthlyRentalIncome > 0) updatedAsset.monthlyRentalIncome = parsedMonthlyRentalIncome;
+          if (!isNaN(parsedMonthlyUpdateDay) && parsedMonthlyUpdateDay > 0) updatedAsset.monthlyUpdateDay = parsedMonthlyUpdateDay;
+        }
+
+        group[assetIndex] = updatedAsset;
         
         groups[groupName] = group;
         updated[activeTab] = groups;
@@ -370,26 +403,51 @@ export default function AssetCard({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6 text-sm text-gray-600 mt-4">
-            {/* Campos específicos para Real Estate - ORDEN CAMBIADO */}
-            {activeTab === 'Real Estate' && asset.mortgageAmount && (
-              <div>
-                <div className="text-gray-500 text-sm font-medium mb-2">Mortgage Amount</div>
-                <div className="text-gray-900 font-medium">{formatCurrency(asset.mortgageAmount.toFixed(2))}</div>
-              </div>
-            )}
+            {/* Campos específicos para Real Estate */}
+            {activeTab === 'Real Estate' && (
+              <>
+                <div>
+                  <div className="text-gray-500 text-sm font-medium mb-2">Mortgage Amount</div>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      value={editMortgageAmount}
+                      onChange={(e) => setEditMortgageAmount(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                    />
+                  ) : (
+                    <div className="text-gray-900 font-medium">{asset.mortgageAmount ? formatCurrency(asset.mortgageAmount.toFixed(2)) : '-'}</div>
+                  )}
+                </div>
 
-            {activeTab === 'Real Estate' && asset.monthlyMortgagePayment && (
-              <div>
-                <div className="text-gray-500 text-sm font-medium mb-2">Monthly Mortgage</div>
-                <div className="text-gray-900 font-medium">{formatCurrency(asset.monthlyMortgagePayment.toFixed(2))}</div>
-              </div>
-            )}
+                <div>
+                  <div className="text-gray-500 text-sm font-medium mb-2">Monthly Mortgage</div>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      value={editMonthlyMortgagePayment}
+                      onChange={(e) => setEditMonthlyMortgagePayment(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                    />
+                  ) : (
+                    <div className="text-gray-900 font-medium">{asset.monthlyMortgagePayment ? formatCurrency(asset.monthlyMortgagePayment.toFixed(2)) : '-'}</div>
+                  )}
+                </div>
 
-            {activeTab === 'Real Estate' && asset.monthlyRentalIncome && (
-              <div>
-                <div className="text-gray-500 text-sm font-medium mb-2">Monthly Rental</div>
-                <div className="text-gray-900 font-medium">{formatCurrency(asset.monthlyRentalIncome.toFixed(2))}</div>
-              </div>
+                <div>
+                  <div className="text-gray-500 text-sm font-medium mb-2">Monthly Rental</div>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      value={editMonthlyRentalIncome}
+                      onChange={(e) => setEditMonthlyRentalIncome(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                    />
+                  ) : (
+                    <div className="text-gray-900 font-medium">{asset.monthlyRentalIncome ? formatCurrency(asset.monthlyRentalIncome.toFixed(2)) : '-'}</div>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Hipoteca restante para Real Estate */}
@@ -430,10 +488,21 @@ export default function AssetCard({
             </div>
 
             {/* Día de actualización mensual para Real Estate */}
-            {activeTab === 'Real Estate' && asset.monthlyUpdateDay && (
+            {activeTab === 'Real Estate' && (
               <div>
                 <div className="text-gray-500 text-sm font-medium mb-2">Monthly Update Day</div>
-                <div className="text-gray-900 font-medium">{asset.monthlyUpdateDay}</div>
+                {editMode ? (
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={editMonthlyUpdateDay}
+                    onChange={(e) => setEditMonthlyUpdateDay(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                  />
+                ) : (
+                  <div className="text-gray-900 font-medium">{asset.monthlyUpdateDay || '-'}</div>
+                )}
               </div>
             )}
           </div>

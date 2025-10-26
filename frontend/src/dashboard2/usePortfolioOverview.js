@@ -226,7 +226,10 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
     const initialValue = (asset.initialQty || 0) * (asset.initialCost || 0);
     const assetIRR = irrData?.[asset.id];
     const irrFromAPI = (typeof assetIRR === 'number' && !isNaN(assetIRR)) ? assetIRR : null;
-    const irrValue = irrFromAPI !== null ? irrFromAPI : calculateSimpleIRR(asset);
+    const irrFromAPIPercent = irrFromAPI !== null && Math.abs(irrFromAPI) < 1 
+      ? irrFromAPI * 100  // Backend devuelve decimal (0.155), convertir a porcentaje (15.5)
+      : irrFromAPI;        // Ya está en porcentaje
+    const irrValue = irrFromAPI !== null ? irrFromAPIPercent : calculateSimpleIRR(asset);
     const sevenDayChange = sevenDayData[asset.id] || 0;
     const thirtyDayChange = thirtyDayData[asset.id] || 0;
     const oneYearChange = oneYearData[asset.id] || 0;
