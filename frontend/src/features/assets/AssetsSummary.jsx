@@ -38,20 +38,37 @@ function AnimatedNumber({ value }) {
 }
 
 /**
- * Muestra la cifra sólo de la categoría activa (p.ej. 'Investments').
+ * Muestra la cifra de la categoría activa (p.ej. 'Investments').
+ * Si showAllCategories es true, muestra la suma de todas las categorías.
  *
  * Props:
  * - initialData: el objeto completo de categoryGroups
  * - marketData:  los precios que vienen del hook useMarketData
  * - activeTab:   el nombre de la categoría activa ('Investments', 'Real Estate', 'Others', etc.)
+ * - showAllCategories: si es true, suma todas las categorías en lugar de solo activeTab
  */
-export default function AssetsSummary({ initialData, marketData, activeTab }) {
-  // Usamos calculateTotals para filtrar sólo la categoría activeTab
-  const { totalInitial, totalActual } = calculateTotals(
-    initialData,
-    marketData,
-    activeTab
-  );
+export default function AssetsSummary({ initialData, marketData, activeTab, showAllCategories = false }) {
+  let totalInitial = 0;
+  let totalActual = 0;
+
+  if (showAllCategories) {
+    // Calcular la suma de todas las categorías
+    const categories = ['Investments', 'Real Estate', 'Others'];
+    categories.forEach(category => {
+      const { totalInitial: init, totalActual: actual } = calculateTotals(
+        initialData,
+        marketData,
+        category
+      );
+      totalInitial += init;
+      totalActual += actual;
+    });
+  } else {
+    // Usamos calculateTotals para filtrar sólo la categoría activeTab
+    const result = calculateTotals(initialData, marketData, activeTab);
+    totalInitial = result.totalInitial;
+    totalActual = result.totalActual;
+  }
 
   const changeAbs = totalActual - totalInitial;
   const changePct = totalInitial > 0 ? (changeAbs / totalInitial) * 100 : 0;

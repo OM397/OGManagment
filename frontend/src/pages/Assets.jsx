@@ -173,6 +173,7 @@ export default function Assets({
         initialData={categoryGroups}
         marketData={marketData}
         activeTab={activeTab}
+        showAllCategories={true}
       />
 
       {/* Category Tabs - ¡AQUÍ ESTÁN LAS PESTAÑAS! */}

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '../../layouts/AppLayout';
 // import Dashboard from '../../pages/Dashboard';
 import Assets from '../../pages/Assets';
-import History from '../../pages/History';
 import Dashboard2 from '../../pages/Dashboard2';
 import RealEstateDashboard from '../../pages/RealEstateDashboard';
 import ChangePasswordModal from '../ChangePasswordModal';
@@ -18,9 +17,12 @@ export default function InnerApp({ user, onLogout }) {
   const [selectedView, setSelectedView] = useState(() => {
     try {
       const stored = typeof window !== 'undefined' ? window.localStorage.getItem('lastView') : null;
-  return stored || 'Dashboard2';
+      if (stored === 'History') {
+        return 'Dashboard2';
+      }
+      return stored || 'Dashboard2';
     } catch (e) {
-  return 'Dashboard2';
+      return 'Dashboard2';
     }
   });
   const [reloadTrigger, setReloadTrigger] = useState(0);
@@ -81,8 +83,6 @@ export default function InnerApp({ user, onLogout }) {
         return <Dashboard2 {...commonProps} />;
       case 'Assets':
         return <Assets {...commonProps} />;
-      case 'History':
-        return <History />;
       case 'Dashboard2':
         return <Dashboard2 {...commonProps} />;
       case 'RealEstateDashboard':

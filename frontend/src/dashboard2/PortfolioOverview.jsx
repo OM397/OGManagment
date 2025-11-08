@@ -271,7 +271,10 @@ export default function PortfolioOverview({ assets }) {
         </div>
         <div className="divide-y divide-gray-100 h-full min-h-0 flex flex-col">
           {sortedAssets.map((asset, idx) => (
-            <div key={asset.id || idx} className="flex items-center py-1.5 pr-2 text-[11px] md:text-[12px] gap-x-2 w-full">
+            <div
+              key={asset.uniqueKey || asset.id || `${asset.name}-${asset.groupName || 'ungrouped'}-${idx}`}
+              className="flex items-center py-1.5 pr-2 text-[11px] md:text-[12px] gap-x-2 w-full"
+            >
               <div 
                 className="font-medium text-gray-800 pr-1 truncate" 
                 style={{ minWidth: `${assetColumnWidth}px`, width: `${assetColumnWidth}px` }}

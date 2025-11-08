@@ -245,14 +245,6 @@ export const dataAPI = {
   },
 
   /**
-   * Obtener historial
-   */
-  async getHistory(params = {}) {
-    const response = await apiClient.get('/history', { params });
-    return response.data;
-  },
-
-  /**
    * Análisis de inversión
    */
   async analyzeInvestment(data) {

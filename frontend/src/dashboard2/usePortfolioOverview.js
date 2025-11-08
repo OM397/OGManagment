@@ -181,10 +181,14 @@ export default function usePortfolioOverview(categoryGroups, marketData) {
     const assets = [];
     Object.entries(categoryGroups?.Investments || {}).forEach(([groupName, groupAssets]) => {
       if (Array.isArray(groupAssets)) {
-        groupAssets.forEach(asset => {
+        groupAssets.forEach((asset, index) => {
           if (asset?.id && asset?.name && (asset.type === 'stock' || asset.type === 'crypto')) {
             assets.push({
               ...asset,
+              assetIndex: index,
+              uniqueKey: asset.id
+                ? `${asset.id}::${groupName || 'ungrouped'}::${index}`
+                : `${groupName || 'ungrouped'}::${asset.name || 'asset'}::${index}`,
               nameShort: asset.name
                 .replace(/\b(ETF|UCITS|Acc|Dist|Ins|PI|USD|AG|Trust|Edge|ETC)\b/g, '')
                 .replace(/€/g, 'Euro')

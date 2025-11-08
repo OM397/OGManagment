@@ -42,7 +42,6 @@ const tickersHistoryRoutes = require(path.join(__dirname, baseDir, 'tickersHisto
 const investmentAnalysisRoutes = require(path.join(__dirname, baseDir, 'investmentAnalysisRoutes.js'));
 const mailingConfigRoutes = require(path.join(__dirname, baseDir, 'mailingConfigRoutes.js'));
 const adminMailingRoutes = require(path.join(__dirname, baseDir, 'adminMailingRoutes.js'));
-const performanceRoutes = require(path.join(__dirname, baseDir, 'performanceRoutes.js'));
 
 // Note: authMiddleware is applied within specific route modules; no need to import here
 
@@ -166,7 +165,6 @@ app.get('/api/public-config', (req, res) => {
 
 
 // Public lightweight data routes first (avoid accidental auth interception)
-app.use('/api', performanceRoutes);
 app.use('/api', tickersRoutes);
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
@@ -175,7 +173,6 @@ app.use('/api/investments', investmentAnalysisRoutes);
 app.use('/api', tickersHistoryRoutes);
 app.use('/api/mailing-config', mailingConfigRoutes);
 app.use('/api/admin', adminMailingRoutes);
-// performance already mounted early
 
 // Basic metrics (JSON). For Prometheus you can adapt formatting.
 app.get('/api/metrics', (req, res) => {

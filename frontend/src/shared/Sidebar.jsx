@@ -1,8 +1,7 @@
 // 📁 frontend/src/shared/Sidebar.jsx
-import React, { useMemo } from 'react';
-import { BarChart2, Gem, Clock, Home } from 'lucide-react';
+import React from 'react';
+import { BarChart2, Gem, Home } from 'lucide-react';
 import { calculateTotals } from './calculateAssetTotals';
-import AnimatedNumber from './AnimatedNumber'; // ✅ import animation
 import { formatter } from './utils';
 import usePortfolioOverview from '../dashboard2/usePortfolioOverview';
 
@@ -11,7 +10,6 @@ export default function Sidebar({ selected, setSelected, categoryGroups = {}, ma
     { name: 'Assets', label: 'Assets', icon: <Gem size={18} /> },
     { name: 'Net Worth', label: 'Investments', icon: <BarChart2 size={18} /> },
     { name: 'RealEstateDashboard', label: 'Real Estate', icon: <Home size={18} /> },
-    { name: 'History', label: 'History', icon: <Clock size={18} /> }
   ];
 
   // Usar el mismo hook que Dashboard2 para el total actual de inversiones
